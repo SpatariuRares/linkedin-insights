@@ -123,7 +123,7 @@ export function parseLinkedInExport(buffer: ArrayBuffer): LinkedInExport {
 
   if (wb.SheetNames.length < 5) {
     throw new Error(
-      'Arquivo não reconhecido como export de analytics do LinkedIn (esperado 5 abas: Discovery, Engagement, Top Posts, Followers, Demographics).',
+      'File non riconosciuto come export di analytics di LinkedIn (attesi 5 fogli: Discovery, Engagement, Top Posts, Followers, Demographics).',
     );
   }
 

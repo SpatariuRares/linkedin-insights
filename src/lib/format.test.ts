@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { formatNumber, formatCompact, formatPercent, formatDateShort } from './format';
 
 describe('formatNumber', () => {
-  it('formats using pt-BR thousands separators', () => {
+  it('formats using it-IT thousands separators', () => {
     expect(formatNumber(12345)).toBe('12.345');
   });
 
@@ -15,7 +15,7 @@ describe('formatNumber', () => {
 
 describe('formatCompact', () => {
   it('formats large numbers compactly', () => {
-    expect(formatCompact(12345)).toBe('12,3 mil');
+    expect(formatCompact(12345)).toBe('12,3K');
   });
 
   it('returns an em dash for null/undefined/NaN', () => {
@@ -25,8 +25,8 @@ describe('formatCompact', () => {
 
 describe('formatPercent', () => {
   it('formats with the given digit precision', () => {
-    expect(formatPercent(12.345, 2)).toBe('12.35%');
-    expect(formatPercent(12.345)).toBe('12.3%');
+    expect(formatPercent(12.345, 2)).toBe('12,35%');
+    expect(formatPercent(12.345)).toBe('12,3%');
   });
 
   it('returns an em dash for null/undefined/NaN', () => {
@@ -36,11 +36,11 @@ describe('formatPercent', () => {
 
 describe('formatDateShort', () => {
   it('formats an ISO date string with local-time suffix', () => {
-    expect(formatDateShort('2025-07-24T00:00:00')).toBe('24 de jul.');
+    expect(formatDateShort('2025-07-24T00:00:00')).toBe('24 lug');
   });
 
   it('accepts a Date instance directly', () => {
-    expect(formatDateShort(new Date('2025-07-24T00:00:00'))).toBe('24 de jul.');
+    expect(formatDateShort(new Date('2025-07-24T00:00:00'))).toBe('24 lug');
   });
 
   it('falls back to the raw input for an unparseable date', () => {

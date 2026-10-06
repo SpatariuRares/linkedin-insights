@@ -36,6 +36,10 @@
   --chart-grid: #e1e0d9;
   --chart-baseline: #c3c2b7;
   --chart-good: #006300;
+  --status-good: #0ca30c;
+  --status-warning: #fab219;
+  --status-serious: #ec835a;
+  --status-critical: #d03b3b;
 
   /* categorical series (validated adjacent-pair order, dataviz skill palette) */
   --series-1: #2a78d6;

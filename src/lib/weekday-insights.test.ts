@@ -11,7 +11,7 @@ describe('computeWeekdayPerformance', () => {
     ];
     const performance = computeWeekdayPerformance(engagement);
     const monday = performance[0];
-    expect(monday.day).toBe('Seg');
+    expect(monday.day).toBe('Lun');
     expect(monday.totalImpressions).toBe(300);
     expect(monday.totalEngagements).toBe(40);
     expect(monday.sampleDays).toBe(2);

@@ -43,3 +43,41 @@ export function extractTrailingDate(label: string): string | null {
   const m = label.match(/(\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4})\s*$/);
   return m ? m[1] : null;
 }
+
+/**
+ * Day keys ("YYYY-MM-DD") are the unit for everything stored long-term (history, calendar). Math on
+ * them goes through UTC so DST transitions never make a day 23 or 25 hours long.
+ */
+export function dayKey(isoOrDate: string | Date): string {
+  if (isoOrDate instanceof Date) {
+    const y = isoOrDate.getFullYear();
+    const m = String(isoOrDate.getMonth() + 1).padStart(2, '0');
+    const d = String(isoOrDate.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+  return isoOrDate.slice(0, 10);
+}
+
+function keyToUtc(key: string): number {
+  const [y, m, d] = key.split('-').map(Number);
+  return Date.UTC(y, m - 1, d);
+}
+
+export function addDays(key: string, days: number): string {
+  return new Date(keyToUtc(key) + days * 86_400_000).toISOString().slice(0, 10);
+}
+
+export function daysBetween(from: string, to: string): number {
+  return Math.round((keyToUtc(to) - keyToUtc(from)) / 86_400_000);
+}
+
+/** Monday of the week containing `key`. */
+export function weekStart(key: string): string {
+  const weekday = (new Date(keyToUtc(key)).getUTCDay() + 6) % 7;
+  return addDays(key, -weekday);
+}
+
+/** Parses a day key as local midnight, the same convention `toIsoDate` uses. */
+export function keyToLocalDate(key: string): Date {
+  return new Date(`${key}T00:00:00`);
+}

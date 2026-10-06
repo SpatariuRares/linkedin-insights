@@ -1,10 +1,12 @@
-# Sinal — Insights do LinkedIn
+# Crescita — dashboard LinkedIn personale
 
-Painel local, 100% client-side (Vite + React 19), que le o export de "Analytics de conteudo"
-do LinkedIn (arquivo AggregateAnalytics_*.xlsx) direto no navegador via SheetJS e mostra
-impressoes, alcance, engajamento diario, crescimento de seguidores, posts em destaque e
-demografia da audiencia. Nenhum dado sai da maquina do usuario; nao ha backend.
+App locale, 100% client-side (Vite + React 19). Legge l'export di analytics di LinkedIn
+(AggregateAnalytics_*.xlsx) nel browser con SheetJS, lo unisce a uno storico salvato in
+localStorage e mostra: obiettivo follower con proiezione, impressioni, engagement, giorno migliore,
+top post, temi, demografia. Include un calendario editoriale. Nessun backend.
 
-## Pages
+## Sezioni
 
-- /: dashboard unico — tela de upload quando vazio, insights apos carregar o arquivo.
+- Dashboard: obiettivo follower e analytics.
+- Calendario: pianificazione dei contenuti.
+- Dati: export importati, backup e ripristino.

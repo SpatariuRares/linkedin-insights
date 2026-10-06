@@ -24,8 +24,8 @@ export function TopicsChart({
   return (
     <div className="grid gap-4 md:grid-cols-2">
       <ChartCard
-        title="Temas com mais engajamento"
-        description="Hashtags extraídas dos posts em destaque, média de engajamento por post"
+        title="Temi con più engagement"
+        description="Hashtag estratti dai post in evidenza, engagement medio per post"
       >
         <BarList
           items={topByEngagement.map((t) => ({
@@ -38,8 +38,8 @@ export function TopicsChart({
       </ChartCard>
 
       <ChartCard
-        title="Temas com mais impressões"
-        description="Hashtags extraídas dos posts em destaque, média de impressões por post"
+        title="Temi con più impressioni"
+        description="Hashtag estratti dai post in evidenza, impressioni medie per post"
       >
         <BarList
           items={topByImpressions.map((t) => ({

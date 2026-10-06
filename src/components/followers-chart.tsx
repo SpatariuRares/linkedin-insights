@@ -1,51 +1,48 @@
 import { useMemo } from 'react';
 import {
-  AreaChart,
-  Area,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
+  ReferenceLine,
   ResponsiveContainer,
 } from 'recharts';
 import { ChartCard } from './chart-card';
 import { chartTooltipContent } from './chart-tooltip';
 import { formatDateShort, formatNumber } from '../lib/format';
+import { weeklyNewFollowers } from '../lib/goal';
 import type { FollowerPoint } from '../lib/linkedin-export';
 
 export function FollowersChart({
   data,
-  totalFollowers,
+  requiredPerWeek,
 }: {
   data: FollowerPoint[];
-  totalFollowers: number | null;
+  requiredPerWeek: number | null;
 }) {
-  const cumulative = useMemo(() => {
-    const totalNew = data.reduce((sum, d) => sum + d.newFollowers, 0);
-    const baseline = totalFollowers !== null ? totalFollowers - totalNew : 0;
-    let running = baseline;
-    return data.map((d) => {
-      running += d.newFollowers;
-      return { date: d.date, total: running, newFollowers: d.newFollowers };
-    });
-  }, [data, totalFollowers]);
+  const weeks = useMemo(() => weeklyNewFollowers(data), [data]);
+  const required = requiredPerWeek !== null ? Math.ceil(requiredPerWeek) : null;
 
   return (
     <ChartCard
-      title="Crescimento de seguidores"
-      description="Total acumulado de seguidores ao longo do período"
+      title="Nuovi follower a settimana"
+      description={
+        required !== null
+          ? `La linea indica i ${formatNumber(required)} a settimana necessari per l'obiettivo entro la data scelta`
+          : 'Settimane da lunedì a domenica · imposta una data obiettivo per vedere il ritmo necessario'
+      }
     >
       <ResponsiveContainer width="100%" height={240}>
-        <AreaChart data={cumulative} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-          <defs>
-            <linearGradient id="fillFollowers" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--series-3)" stopOpacity={0.35} />
-              <stop offset="100%" stopColor="var(--series-3)" stopOpacity={0} />
-            </linearGradient>
-          </defs>
+        <BarChart
+          data={weeks}
+          margin={{ top: 16, right: 8, left: 0, bottom: 0 }}
+          barCategoryGap={2}
+        >
           <CartesianGrid vertical={false} stroke="var(--chart-grid)" />
           <XAxis
-            dataKey="date"
+            dataKey="week"
             tickFormatter={formatDateShort}
             tick={{ fill: 'var(--chart-ink-muted)', fontSize: 11 }}
             tickLine={false}
@@ -53,26 +50,34 @@ export function FollowersChart({
             minTickGap={32}
           />
           <YAxis
-            domain={['dataMin - 5', 'dataMax + 5']}
+            allowDecimals={false}
+            domain={[0, (max: number) => Math.max(max, required ?? 0)]}
             tick={{ fill: 'var(--chart-ink-muted)', fontSize: 11 }}
             tickLine={false}
             axisLine={false}
-            width={48}
+            width={40}
           />
           <Tooltip
+            cursor={{ fill: 'var(--muted)' }}
             content={chartTooltipContent({
-              formatter: (v) => `${formatNumber(v)} seguidores`,
-              labelFormatter: formatDateShort,
+              formatter: (v) => `+${formatNumber(v)} follower`,
+              labelFormatter: (l) => `Settimana del ${formatDateShort(l)}`,
             })}
           />
-          <Area
-            type="monotone"
-            dataKey="total"
-            stroke="var(--series-3)"
-            strokeWidth={2}
-            fill="url(#fillFollowers)"
-          />
-        </AreaChart>
+          {required !== null && (
+            <ReferenceLine
+              y={required}
+              stroke="var(--chart-ink-muted)"
+              label={{
+                value: `Necessari ${formatNumber(required)}`,
+                position: 'insideTopRight',
+                fill: 'var(--chart-ink-secondary)',
+                fontSize: 11,
+              }}
+            />
+          )}
+          <Bar dataKey="gained" fill="var(--series-1)" radius={[4, 4, 0, 0]} maxBarSize={24} />
+        </BarChart>
       </ResponsiveContainer>
     </ChartCard>
   );

@@ -46,15 +46,15 @@ export function WeekdayChart({
       {bestDay && bestDay.engagementRate > 0 && (
         <InsightCard
           icon={CalendarClock}
-          title={`${bestDay.dayLong} é seu melhor dia pra postar`}
-          description={`Taxa de engajamento média de ${formatPercent(bestDay.engagementRate, 2)} nesse dia, contra ${formatPercent(overallRate(performance), 2)} na média geral do período.`}
+          title={`${bestDay.dayLong} è il tuo giorno migliore per pubblicare`}
+          description={`Tasso di engagement medio del ${formatPercent(bestDay.engagementRate, 2)} in questo giorno, contro il ${formatPercent(overallRate(performance), 2)} della media del periodo.`}
         />
       )}
 
       <div className="grid gap-4 md:grid-cols-2">
         <ChartCard
-          title="Engajamento por dia da semana"
-          description="Engajamentos ÷ impressões, somando todo o período"
+          title="Engagement per giorno della settimana"
+          description="Interazioni ÷ impressioni, sommando tutto il periodo"
         >
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={performance} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
@@ -89,8 +89,8 @@ export function WeekdayChart({
         </ChartCard>
 
         <ChartCard
-          title="Frequência de publicação"
-          description="Posts em destaque, por dia da semana em que saíram"
+          title="Frequenza di pubblicazione"
+          description="Post in evidenza, per giorno della settimana di pubblicazione"
         >
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={frequency} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
@@ -119,8 +119,8 @@ export function WeekdayChart({
       </div>
 
       <p className="text-muted-foreground text-xs">
-        O export do LinkedIn traz só a data de publicação, sem horário — por isso dá pra saber o
-        melhor dia da semana, mas não o melhor horário do dia.
+        L&apos;export di LinkedIn contiene solo la data di pubblicazione, senza orario: si può
+        capire il giorno migliore della settimana, ma non l&apos;ora migliore.
       </p>
     </div>
   );

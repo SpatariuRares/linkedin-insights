@@ -30,12 +30,12 @@ function PostsTable({
   return (
     <ChartCard title={title} description={description}>
       {rows.length === 0 ? (
-        <p className="text-muted-foreground text-sm">Sem dados suficientes neste período.</p>
+        <p className="text-muted-foreground text-sm">Dati insufficienti in questo periodo.</p>
       ) : (
         <Table
           columns={[
             { key: 'rank', label: '#' },
-            { key: 'date', label: 'Publicado em' },
+            { key: 'date', label: 'Pubblicato il' },
             { key: 'value', label: metricLabel },
           ]}
           rows={rows}
@@ -47,7 +47,7 @@ function PostsTable({
               rel="noreferrer"
               className="text-primary inline-flex items-center gap-1 text-xs hover:underline"
             >
-              Abrir <ExternalLink className="size-3" />
+              Apri <ExternalLink className="size-3" />
             </a>
           )}
         />
@@ -66,16 +66,16 @@ export function TopPosts({
   return (
     <div className="grid gap-4 md:grid-cols-2">
       <PostsTable
-        title="Top posts por engajamento"
-        description="Curtidas, comentários e compartilhamentos"
+        title="Top post per engagement"
+        description="Reazioni, commenti e condivisioni"
         posts={byEngagement}
-        metricLabel="Engajamentos"
+        metricLabel="Interazioni"
       />
       <PostsTable
-        title="Top posts por impressões"
-        description="Vezes que apareceram no feed"
+        title="Top post per impressioni"
+        description="Volte in cui sono apparsi nel feed"
         posts={byImpressions}
-        metricLabel="Impressões"
+        metricLabel="Impressioni"
       />
     </div>
   );

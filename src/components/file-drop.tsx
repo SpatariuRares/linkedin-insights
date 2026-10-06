@@ -45,17 +45,17 @@ export function FileDrop({ onFile, busy }: { onFile: (file: File) => void; busy?
 
       <div className="space-y-1.5">
         <p className="font-display text-foreground text-xl font-medium">
-          {busy ? 'Lendo sua planilha…' : 'Solte o export do LinkedIn aqui'}
+          {busy ? 'Sto leggendo il file…' : 'Trascina qui l’export di LinkedIn'}
         </p>
         <p className="text-muted-foreground mx-auto max-w-sm text-sm">
-          Arquivo <span className="font-mono">AggregateAnalytics_*.xlsx</span>, baixado em{' '}
-          <em>Seu perfil → Analytics de conteúdo → Exportar</em>. Tudo é processado no seu
-          navegador, nada sai da sua máquina.
+          File <span className="font-mono">AggregateAnalytics_*.xlsx</span>, scaricato da{' '}
+          <em>Profilo → Analytics → Contenuti → Esporta</em> (scegli 365 giorni). Tutto viene
+          elaborato nel browser: niente lascia il tuo computer.
         </p>
       </div>
 
       <Button type="button" variant="outline" onClick={() => inputRef.current?.click()}>
-        Selecionar arquivo
+        Seleziona file
       </Button>
       <input
         ref={inputRef}

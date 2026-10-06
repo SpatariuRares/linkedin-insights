@@ -108,6 +108,6 @@ describe('parseLinkedInExport', () => {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['a']]), 'Sheet1');
     const buf = XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer;
-    expect(() => parseLinkedInExport(buf)).toThrow(/5 abas/);
+    expect(() => parseLinkedInExport(buf)).toThrow(/5 fogli/);
   });
 });

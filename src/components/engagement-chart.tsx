@@ -23,8 +23,8 @@ export function EngagementChart({ data }: { data: DailyPoint[] }) {
   return (
     <div className="grid gap-4 md:grid-cols-2">
       <ChartCard
-        title="Impressões por dia"
-        description="Quantas vezes seus posts apareceram no feed"
+        title="Impressioni al giorno"
+        description="Quante volte i tuoi post sono apparsi nel feed"
       >
         <ResponsiveContainer width="100%" height={220}>
           <AreaChart data={withRate} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
@@ -51,7 +51,7 @@ export function EngagementChart({ data }: { data: DailyPoint[] }) {
             />
             <Tooltip
               content={chartTooltipContent({
-                formatter: (v) => `${formatNumber(v)} impressões`,
+                formatter: (v) => `${formatNumber(v)} impressioni`,
                 labelFormatter: formatDateShort,
               })}
             />
@@ -66,7 +66,10 @@ export function EngagementChart({ data }: { data: DailyPoint[] }) {
         </ResponsiveContainer>
       </ChartCard>
 
-      <ChartCard title="Taxa de engajamento por dia" description="Engajamentos ÷ impressões, em %">
+      <ChartCard
+        title="Tasso di engagement al giorno"
+        description="Interazioni ÷ impressioni, in %"
+      >
         <ResponsiveContainer width="100%" height={220}>
           <LineChart data={withRate} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
             <CartesianGrid vertical={false} stroke="var(--chart-grid)" />

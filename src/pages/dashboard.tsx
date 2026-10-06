@@ -1,8 +1,10 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Eye, Users, UserPlus, TrendingUp } from 'lucide-react';
-import { toast } from 'sonner';
-import { Header } from '../components/header';
 import { FileDrop } from '../components/file-drop';
+import { ImportButton } from '../components/import-button';
+import { PeriodFilter } from '../components/period-filter';
+import { PERIODS, type PeriodId } from '../lib/periods';
+import { GoalSection } from '../components/goal-section';
 import { StatTile } from '../components/stat-tile';
 import { EngagementChart } from '../components/engagement-chart';
 import { FollowersChart } from '../components/followers-chart';
@@ -11,150 +13,210 @@ import { ExtraInsights } from '../components/extra-insights';
 import { TopPosts } from '../components/top-posts';
 import { TopicsChart } from '../components/topics-chart';
 import { Demographics } from '../components/demographics';
-import { parseLinkedInExport, type LinkedInExport } from '../lib/linkedin-export';
-import { formatCompact, formatNumber, formatPercent } from '../lib/format';
+import { hasData, rankedPosts } from '../lib/history';
+import { computeGoal } from '../lib/goal';
+import { addDays, dayKey } from '../lib/dates';
+import { formatCompact, formatDateShort, formatNumber, formatPercent } from '../lib/format';
+import type { AppState, GoalSettings } from '../lib/storage';
 
-export function Dashboard() {
-  const [data, setData] = useState<LinkedInExport | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [fileName, setFileName] = useState<string | null>(null);
+const PERIOD_KEY = 'linkedin-dashboard:period';
 
-  const handleFile = useCallback(async (file: File) => {
-    if (!file.name.toLowerCase().endsWith('.xlsx')) {
-      toast.error('Envie um arquivo .xlsx exportado do LinkedIn.');
-      return;
-    }
-    setBusy(true);
+function initialPeriod(): PeriodId {
+  try {
+    const v = localStorage.getItem(PERIOD_KEY);
+    if (PERIODS.some((p) => p.id === v)) return v as PeriodId;
+  } catch {
+    /* storage unavailable */
+  }
+  return '90';
+}
+
+export function Dashboard({
+  state,
+  onFile,
+  busy,
+  onGoalChange,
+}: {
+  state: AppState;
+  onFile: (file: File) => void;
+  busy: boolean;
+  onGoalChange: (goal: GoalSettings) => void;
+}) {
+  const { history } = state;
+  const [period, setPeriod] = useState<PeriodId>(initialPeriod);
+
+  const changePeriod = (id: PeriodId) => {
+    setPeriod(id);
     try {
-      const buffer = await file.arrayBuffer();
-      const parsed = parseLinkedInExport(buffer);
-      setData(parsed);
-      setFileName(file.name);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Não foi possível ler esse arquivo.');
-    } finally {
-      setBusy(false);
+      localStorage.setItem(PERIOD_KEY, id);
+    } catch {
+      /* storage unavailable */
     }
-  }, []);
+  };
 
-  const totals = useMemo(() => {
-    if (!data) return null;
-    const totalEngagements = data.engagement.reduce((s, d) => s + d.engagements, 0);
-    const totalImpressions =
-      data.impressions ?? data.engagement.reduce((s, d) => s + d.impressions, 0);
-    const engagementRate = totalImpressions > 0 ? (totalEngagements / totalImpressions) * 100 : 0;
-    const newFollowers = data.followers.reduce((s, d) => s + d.newFollowers, 0);
-    return { totalEngagements, totalImpressions, engagementRate, newFollowers };
-  }, [data]);
+  const lastDay = useMemo(() => {
+    const days = [...history.engagement, ...history.followers].map((p) => dayKey(p.date)).sort();
+    return days.at(-1) ?? null;
+  }, [history]);
+
+  const view = useMemo(() => {
+    const days = PERIODS.find((p) => p.id === period)!.days;
+    const from = days && lastDay ? addDays(lastDay, -(days - 1)) : null;
+    const inRange = (d: string) => !from || dayKey(d) >= from;
+    const engagement = history.engagement.filter((p) => inRange(p.date));
+    const followers = history.followers.filter((p) => inRange(p.date));
+    const posts = history.posts.filter((p) => p.day && inRange(p.day));
+    const ranked = rankedPosts(posts);
+
+    const totalImpressions = engagement.reduce((s, d) => s + d.impressions, 0);
+    const totalEngagements = engagement.reduce((s, d) => s + d.engagements, 0);
+    const newFollowers = followers.reduce((s, d) => s + d.newFollowers, 0);
+    return {
+      from: engagement[0]?.date ?? from,
+      engagement,
+      followers,
+      ...ranked,
+      totalImpressions,
+      totalEngagements,
+      newFollowers,
+      engagementRate: totalImpressions > 0 ? (totalEngagements / totalImpressions) * 100 : 0,
+    };
+  }, [history, period, lastDay]);
+
+  const anchor = history.followerTotals.at(-1) ?? null;
+  const goal = useMemo(
+    () =>
+      computeGoal({
+        followers: history.followers,
+        anchor,
+        target: state.goal.target,
+        targetDay: state.goal.targetDay,
+        today: dayKey(new Date()),
+      }),
+    [history.followers, anchor, state.goal],
+  );
+
+  if (!hasData(history)) {
+    return (
+      <div className="mx-auto max-w-2xl space-y-6 py-6">
+        <div className="space-y-2 text-center">
+          <h1 className="font-display text-foreground text-2xl font-semibold">
+            Inizia dal tuo export
+          </h1>
+          <p className="text-muted-foreground text-sm">
+            Ogni export che carichi si aggiunge allo storico, così vedi la crescita oltre i 365
+            giorni che LinkedIn ti dà. Ripeti l&apos;import ogni settimana o due.
+          </p>
+        </div>
+        <FileDrop onFile={onFile} busy={busy} />
+      </div>
+    );
+  }
+
+  const latestImport = history.imports.at(-1)!;
 
   return (
-    <div className="min-h-screen">
-      <Header hasData={!!data} onReset={() => setData(null)} />
+    <div className="space-y-8">
+      {goal && anchor && (
+        <GoalSection
+          goal={goal}
+          settings={state.goal}
+          onChange={onGoalChange}
+          followers={history.followers}
+          anchor={anchor}
+        />
+      )}
 
-      <main className="mx-auto max-w-6xl px-6 py-10">
-        {!data ? (
-          <div className="mx-auto max-w-2xl py-10">
-            <FileDrop onFile={handleFile} busy={busy} />
-          </div>
-        ) : (
-          <div className="space-y-8">
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <div>
-                <h1 className="font-display text-foreground text-2xl font-semibold">
-                  Visão geral do período
-                </h1>
-                {data.rangeLabel && (
-                  <p className="text-muted-foreground text-sm">{data.rangeLabel}</p>
-                )}
-              </div>
-              {fileName && <p className="text-muted-foreground font-mono text-xs">{fileName}</p>}
-            </div>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="font-display text-foreground text-2xl font-semibold">Andamento</h1>
+          {view.from && lastDay && (
+            <p className="text-muted-foreground text-sm">
+              Dal {formatDateShort(view.from)} al {formatDateShort(lastDay)}
+            </p>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <PeriodFilter value={period} onChange={changePeriod} />
+          <ImportButton onFile={onFile} busy={busy} />
+        </div>
+      </div>
 
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-              <StatTile
-                label="Impressões"
-                value={formatCompact(totals?.totalImpressions)}
-                sub={`${formatNumber(totals?.totalImpressions)} no total`}
-                icon={Eye}
-                accent="series-1"
-              />
-              <StatTile
-                label="Alcance"
-                value={formatCompact(data.membersReached)}
-                sub="pessoas alcançadas"
-                icon={Users}
-                accent="series-2"
-              />
-              <StatTile
-                label="Seguidores"
-                value={formatCompact(data.totalFollowers)}
-                sub={totals ? `+${formatNumber(totals.newFollowers)} no período` : undefined}
-                icon={UserPlus}
-                accent="series-3"
-              />
-              <StatTile
-                label="Taxa de engajamento"
-                value={formatPercent(totals?.engagementRate, 2)}
-                sub={`${formatNumber(totals?.totalEngagements)} engajamentos`}
-                icon={TrendingUp}
-                accent="series-4"
-              />
-            </div>
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <StatTile
+          label="Impressioni"
+          value={formatCompact(view.totalImpressions)}
+          sub={`${formatNumber(view.totalImpressions)} nel periodo`}
+          icon={Eye}
+          accent="series-1"
+        />
+        <StatTile
+          label="Membri raggiunti"
+          value={formatCompact(latestImport.membersReached)}
+          sub={latestImport.rangeLabel ?? 'ultimo export'}
+          icon={Users}
+          accent="series-2"
+        />
+        <StatTile
+          label="Nuovi follower"
+          value={`+${formatNumber(view.newFollowers)}`}
+          sub="nel periodo"
+          icon={UserPlus}
+          accent="series-3"
+        />
+        <StatTile
+          label="Tasso di engagement"
+          value={formatPercent(view.engagementRate, 2)}
+          sub={`${formatNumber(view.totalEngagements)} interazioni`}
+          icon={TrendingUp}
+          accent="series-4"
+        />
+      </div>
 
-            <section className="space-y-4">
-              <h2 className="font-display text-foreground text-lg font-medium">Outros insights</h2>
-              <ExtraInsights
-                engagement={data.engagement}
-                totalImpressions={totals?.totalImpressions ?? null}
-                totalFollowers={data.totalFollowers}
-                topByEngagement={data.topByEngagement}
-                topByImpressions={data.topByImpressions}
-              />
-            </section>
+      <section className="space-y-4">
+        <h2 className="font-display text-foreground text-lg font-medium">Segnali</h2>
+        <ExtraInsights
+          engagement={view.engagement}
+          totalImpressions={view.totalImpressions}
+          totalFollowers={anchor?.total ?? null}
+          topByEngagement={view.byEngagement}
+          topByImpressions={view.byImpressions}
+        />
+      </section>
 
-            <section className="space-y-4">
-              <EngagementChart data={data.engagement} />
-            </section>
+      <section className="space-y-4">
+        <FollowersChart data={view.followers} requiredPerWeek={goal?.requiredPerWeek ?? null} />
+      </section>
 
-            <section className="space-y-4">
-              <FollowersChart data={data.followers} totalFollowers={data.totalFollowers} />
-            </section>
+      <section className="space-y-4">
+        <EngagementChart data={view.engagement} />
+      </section>
 
-            <section className="space-y-4">
-              <h2 className="font-display text-foreground text-lg font-medium">Quando postar</h2>
-              <WeekdayChart
-                engagement={data.engagement}
-                topByEngagement={data.topByEngagement}
-                topByImpressions={data.topByImpressions}
-              />
-            </section>
+      <section className="space-y-4">
+        <h2 className="font-display text-foreground text-lg font-medium">Quando pubblicare</h2>
+        <WeekdayChart
+          engagement={view.engagement}
+          topByEngagement={view.byEngagement}
+          topByImpressions={view.byImpressions}
+        />
+      </section>
 
-            <section className="space-y-4">
-              <h2 className="font-display text-foreground text-lg font-medium">
-                Posts em destaque
-              </h2>
-              <TopPosts byEngagement={data.topByEngagement} byImpressions={data.topByImpressions} />
-            </section>
+      <section className="space-y-4">
+        <h2 className="font-display text-foreground text-lg font-medium">Post in evidenza</h2>
+        <TopPosts byEngagement={view.byEngagement} byImpressions={view.byImpressions} />
+      </section>
 
-            <section className="space-y-4">
-              <h2 className="font-display text-foreground text-lg font-medium">
-                Temas que mais performam
-              </h2>
-              <TopicsChart
-                byEngagement={data.topByEngagement}
-                byImpressions={data.topByImpressions}
-              />
-            </section>
+      <section className="space-y-4">
+        <h2 className="font-display text-foreground text-lg font-medium">Temi che funzionano</h2>
+        <TopicsChart byEngagement={view.byEngagement} byImpressions={view.byImpressions} />
+      </section>
 
-            <section className="space-y-4">
-              <h2 className="font-display text-foreground text-lg font-medium">
-                Demografia da audiência
-              </h2>
-              <Demographics rows={data.demographics} />
-            </section>
-          </div>
-        )}
-      </main>
+      {history.demographics.length > 0 && (
+        <section className="space-y-4">
+          <h2 className="font-display text-foreground text-lg font-medium">Chi ti segue</h2>
+          <Demographics rows={history.demographics} />
+        </section>
+      )}
     </div>
   );
 }

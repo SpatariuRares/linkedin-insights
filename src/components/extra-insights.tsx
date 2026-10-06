@@ -64,46 +64,46 @@ export function ExtraInsights({
             }
             title={
               momentum.deltaPct > 2
-                ? 'Impressões em alta'
+                ? 'Impressioni in crescita'
                 : momentum.deltaPct < -2
-                  ? 'Impressões em queda'
-                  : 'Impressões estáveis'
+                  ? 'Impressioni in calo'
+                  : 'Impressioni stabili'
             }
-            description={`Média dos últimos 7 dias: ${formatNumber(Math.round(momentum.recentAvg))}/dia, contra ${formatNumber(Math.round(momentum.previousAvg))}/dia nos 7 dias anteriores (${momentum.deltaPct >= 0 ? '+' : ''}${momentum.deltaPct.toFixed(0)}%).`}
+            description={`Media degli ultimi 7 giorni: ${formatNumber(Math.round(momentum.recentAvg))}/giorno, contro ${formatNumber(Math.round(momentum.previousAvg))}/giorno nei 7 giorni precedenti (${momentum.deltaPct >= 0 ? '+' : ''}${momentum.deltaPct.toFixed(0)}%).`}
           />
         )}
 
         {reachEfficiency !== null && (
           <InsightCard
             icon={Radar}
-            title={`${reachEfficiency.toFixed(1)}x impressões por seguidor`}
-            description="Cada seguidor equivale, em média, a esse tanto de impressões no período — acima de 1x indica alcance além da sua rede direta."
+            title={`${reachEfficiency.toFixed(1)}x impressioni per follower`}
+            description="In media ogni follower vale questo numero di impressioni nel periodo: sopra 1x significa che arrivi oltre la tua rete diretta."
           />
         )}
 
         {postingGap && (
           <InsightCard
             icon={CalendarX}
-            title={`${postingGap.days} dias no maior intervalo`}
-            description={`Maior intervalo entre posts que entraram nos rankings acima, de ${formatDateShort(postingGap.from)} a ${formatDateShort(postingGap.to)}.`}
+            title={`${postingGap.days} giorni di pausa massima`}
+            description={`Pausa più lunga tra i post presenti nelle classifiche, dal ${formatDateShort(postingGap.from)} al ${formatDateShort(postingGap.to)}.`}
           />
         )}
       </div>
 
       {overlapPosts.length > 0 && (
         <ChartCard
-          title="Posts na dobradinha"
-          description={`${overlapPosts.length} post(s) que aparecem no Top por engajamento E no Top por impressões ao mesmo tempo — seu conteúdo mais completo`}
+          title="Post doppia vittoria"
+          description={`${overlapPosts.length} post presenti sia nella Top per engagement sia nella Top per impressioni: i tuoi contenuti più completi`}
         >
           <div className="text-muted-foreground flex items-center gap-1.5 pb-3 text-xs">
             <Star className="size-3.5" />
-            <span>Ordenados como aparecem no ranking de engajamento</span>
+            <span>Ordinati come nella classifica per engagement</span>
           </div>
           <Table
             columns={[
-              { key: 'date', label: 'Publicado em' },
-              { key: 'engagements', label: 'Engajamentos' },
-              { key: 'impressions', label: 'Impressões' },
+              { key: 'date', label: 'Pubblicato il' },
+              { key: 'engagements', label: 'Interazioni' },
+              { key: 'impressions', label: 'Impressioni' },
             ]}
             rows={overlapRows}
             pageSize={10}
@@ -114,7 +114,7 @@ export function ExtraInsights({
                 rel="noreferrer"
                 className="text-primary inline-flex items-center gap-1 text-xs hover:underline"
               >
-                Abrir <ExternalLink className="size-3" />
+                Apri <ExternalLink className="size-3" />
               </a>
             )}
           />

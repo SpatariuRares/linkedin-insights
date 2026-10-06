@@ -1,104 +1,75 @@
-English | [Português](README.pt.md)
+# Crescita — dashboard per crescere su LinkedIn
 
-# LinkedIn Insights
+Dashboard per far crescere un profilo LinkedIn: obiettivo follower, calendario editoriale, news e bozze di post.
+Gira tutta nel browser: legge l'export di analytics di LinkedIn (`AggregateAnalytics_*.xlsx`),
+nessun login, nessuna API, nessun dato che lascia il computer.
 
-[![CI](https://github.com/obrenoalvim/linkedin-insights/actions/workflows/ci.yml/badge.svg)](https://github.com/obrenoalvim/linkedin-insights/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+Fork di [obrenoalvim/linkedin-insights](https://github.com/obrenoalvim/linkedin-insights) (MIT).
 
-**Sinal** turns LinkedIn's own "Content analytics" export (`AggregateAnalytics_*.xlsx`) into a
-dashboard built for people who post — not just impressions and follower counts, but the
-questions a creator actually has: which day of the week should I post on, which topics land,
-which posts punch above their weight.
+## Cosa fa
 
-Everything runs in your browser. The `.xlsx` is parsed client-side with SheetJS — nothing is
-uploaded anywhere, there's no backend at all.
+**Dashboard**
 
-## Features
+- **Obiettivo follower**: avanzamento verso il target, ritmo a 30 e 90 giorni, data stimata di
+  arrivo, ritmo necessario per una data scelta, grafico con proiezione.
+- **Storico cumulativo**: ogni export importato si unisce ai precedenti (per giorno e per URL dei
+  post), così la crescita resta visibile oltre i 365 giorni che LinkedIn esporta.
+- Filtro periodo (30 / 90 giorni, 12 mesi, tutto), impressioni, tasso di engagement, nuovi
+  follower a settimana rispetto al ritmo necessario.
+- Dal progetto originale: giorno migliore per pubblicare, momentum 7 giorni, post "doppia
+  vittoria", temi (hashtag) che funzionano, top post, demografia.
 
-- **Overview stats** — impressions, reach, followers, engagement rate for the exported period.
-- **Best day to post** — average engagement rate by weekday, compared against how often you
-  actually post on each day.
-- **Momentum** — last 7 days vs. the previous 7, so you can tell if reach is trending up or down.
-- **Reach efficiency** — impressions per follower, a rough signal of reach beyond your own network.
-- **Topics that perform** — hashtags extracted straight from each post's URL, ranked by average
-  engagement and average impressions.
-- **"Double win" posts** — posts that land in both the top-engagement and top-impressions lists
-  at once.
-- **Longest posting gap**, top posts tables, and audience demographics (company, seniority,
-  industry, location...).
-- **Any export locale** — sheet names, date order (`DD/MM` vs `MM/DD`) and percentage formatting
-  ("< 1%" vs "menos de 1%") are all detected automatically; tested against both English and
-  Portuguese (Brazil) exports.
-- Dark/light mode, no account, no tracking.
+**Calendario editoriale**
 
-## Tech stack
+- Vista mensile (agenda su mobile), archivio idee con drag & drop sui giorni.
+- Stato (idea → bozza → programmato → pubblicato), formato, pilastro di contenuto (max 8, colori
+  stabili).
+- Obiettivo di post a settimana con contatore per ogni settimana; il giorno migliore dai dati è
+  evidenziato.
+- Un post pubblicato con il suo link mostra impressioni e interazioni prese dall'export.
 
-- **Vite + React 19 + TypeScript**
-- **Tailwind CSS v4** with a small copy-in UI kit (`src/components/ui`)
-- **[xlsx (SheetJS)](https://sheetjs.com/)** — parses the export in the browser (the official
-  CDN build, not the vulnerable npm package)
-- **[Recharts](https://recharts.org)** for the charts
-- **Zod** to validate/normalize the numbers coming out of the spreadsheet
-- **Vitest** for unit tests
+**Dati**: elenco degli export importati, backup/ripristino JSON, cancellazione.
 
-## Getting started
+## Avvio
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173), then drop your `.xlsx` on the page (or click
-"Selecionar arquivo").
+Apri http://localhost:5173 e carica l'export: profilo LinkedIn → Analytics → Contenuti →
+Esporta (365 giorni). Ripeti ogni 1–2 settimane.
 
-Get the export from LinkedIn: your profile → **Analytics** → **Content analytics** → **Export**
-(last 90 days, or up to a year on some accounts).
+I dati sono nel `localStorage` del browser: scarica un backup dalla pagina **Dati** ogni tanto.
 
-## Project structure
+## Limiti dell'export
+
+- Nessun orario di pubblicazione: si può capire il giorno migliore, non l'ora.
+- Solo i 50 migliori post per engagement e per impressioni del periodo.
+- Il totale follower è uno solo (a fine periodo): la curva storica è ricostruita all'indietro
+  dai nuovi follower giornalieri.
+
+## Stack
+
+Vite, React 19, TypeScript, Tailwind CSS v4, SheetJS (build CDN), Recharts, Zod, Vitest.
+
+| Script          | Uso                 |
+| --------------- | ------------------- |
+| `npm run dev`   | server di sviluppo  |
+| `npm run build` | build di produzione |
+| `npm test`      | test (Vitest)       |
+| `npm run lint`  | oxlint + Prettier   |
+
+## Struttura
 
 ```
 src/
   lib/
-    linkedin-export.ts   # parses the 5 export sheets (position-based, locale-agnostic)
-    dates.ts              # detects DD/MM vs MM/DD per file and normalizes to local ISO
-    weekday-insights.ts, topics.ts, extra-insights.ts
-    format.ts              # pt-BR number/date/percent formatting
-  components/
-    file-drop.tsx           # upload / drag-and-drop screen
-    engagement-chart.tsx, followers-chart.tsx, weekday-chart.tsx, topics-chart.tsx
-    extra-insights.tsx, top-posts.tsx, demographics.tsx
-    stat-tile.tsx, insight-card.tsx, chart-card.tsx, chart-tooltip.tsx, bar-list.tsx
-    ui/                       # copy-in kit inherited from front-template-react
-  pages/dashboard.tsx        # owns state (file loaded or not) and page layout
+    linkedin-export.ts   parser dei 5 fogli dell'export (per posizione, indipendente dalla lingua)
+    history.ts           unione di più export in uno storico
+    goal.ts              obiettivo follower: ritmo, proiezione, data stimata
+    calendar.ts          calendario editoriale: griglia mese, pilastri, link post ↔ metriche
+    storage.ts           persistenza localStorage + backup
+  pages/                 dashboard, calendar, data
+  components/            grafici e UI
 ```
-
-## Scripts
-
-| Script              | Purpose                      |
-| ------------------- | ---------------------------- |
-| `npm run dev`       | Start dev server             |
-| `npm run build`     | Production build             |
-| `npm run preview`   | Preview the production build |
-| `npm run lint`      | oxlint + Prettier check      |
-| `npm run format`    | Format with Prettier         |
-| `npm run test:unit` | Vitest                       |
-
-## Design notes
-
-- **Started from `front-template-react`**, then stripped everything that template needed but a
-  single-screen local tool doesn't: auth, multi-locale i18n, TanStack Query, zustand,
-  react-hook-form, react-router. What was left — Tailwind v4, the copy-in UI kit, dark mode, a
-  sortable/paginated `Table` — was reused as-is.
-- **No dual-axis charts.** Impressions and engagements sit on very different scales (hundreds vs.
-  tens), so instead of one chart with two Y axes (a dataviz anti-pattern), "Impressions per day"
-  and "Engagement rate per day" are two small-multiple charts sharing the same X axis.
-- **Chart palette** is a pre-validated categorical/sequential palette (checked for contrast and
-  deuteranopia/protanopia safety), not picked by eye — see `--series-1..8` in `src/index.css`.
-- **Locale-proof parser.** LinkedIn ships the exact same sheet layout across every export
-  language, only the labels change — so `linkedin-export.ts` reads sheets by position instead of
-  matching English names, detects date order (`DD/MM` vs `MM/DD`) by scanning every date in the
-  file for a value over 12, and extracts percentages by regex instead of matching words like
-  "less than". A bare `YYYY-MM-DD` also gets an explicit local-time suffix — otherwise it parses
-  as UTC midnight and rolls back a day in negative-UTC timezones (Brazil included).
-- **Topic extraction is a heuristic.** LinkedIn encodes a post's hashtags in its URL slug
-  (`.../author_tag-one-tag-two-share-123`); `topics.ts` splits on that, so it only sees hashtags
-  used on posts that made the Top Posts lists (max ~50 each), not your full post history.

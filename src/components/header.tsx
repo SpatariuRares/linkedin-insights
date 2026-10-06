@@ -1,28 +1,50 @@
-import { Radio } from 'lucide-react';
+import { BarChart3, CalendarDays, Database, TrendingUp } from 'lucide-react';
 import { ThemeToggle } from './theme-toggle';
-import { Button } from './ui';
+import { cn } from '../lib/utils';
 
-export function Header({ onReset, hasData }: { onReset?: () => void; hasData: boolean }) {
+export type Tab = 'dashboard' | 'calendar' | 'data';
+
+const TABS: { id: Tab; label: string; icon: typeof BarChart3 }[] = [
+  { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
+  { id: 'calendar', label: 'Calendario', icon: CalendarDays },
+  { id: 'data', label: 'Dati', icon: Database },
+];
+
+export function Header({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
   return (
-    <header className="border-border border-b">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+    <header className="border-border bg-background/80 sticky top-0 z-20 border-b backdrop-blur">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
         <div className="flex items-center gap-2.5">
           <span className="bg-primary/10 flex size-8 items-center justify-center rounded-full">
-            <Radio className="text-primary size-4" strokeWidth={2} />
+            <TrendingUp className="text-primary size-4" strokeWidth={2} />
           </span>
-          <div>
-            <p className="font-display text-foreground text-lg leading-none font-semibold">Sinal</p>
-            <p className="text-muted-foreground text-[11px] leading-none">Insights do LinkedIn</p>
+          <div className="hidden sm:block">
+            <p className="font-display text-foreground text-lg leading-none font-semibold">
+              Crescita
+            </p>
+            <p className="text-muted-foreground text-[11px] leading-none">LinkedIn personale</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {hasData && (
-            <Button variant="outline" size="sm" onClick={onReset}>
-              Trocar arquivo
-            </Button>
-          )}
+        <nav className="flex items-center gap-1" aria-label="Sezioni">
+          {TABS.map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => onTab(id)}
+              aria-current={tab === id ? 'page' : undefined}
+              className={cn(
+                'flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
+                tab === id
+                  ? 'bg-secondary text-foreground'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              <Icon className="size-4" />
+              <span className="hidden sm:inline">{label}</span>
+            </button>
+          ))}
           <ThemeToggle />
-        </div>
+        </nav>
       </div>
     </header>
   );

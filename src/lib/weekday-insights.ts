@@ -1,14 +1,14 @@
 import type { DailyPoint, TopPost } from './linkedin-export';
 
-export const WEEKDAY_LABELS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+export const WEEKDAY_LABELS = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
 export const WEEKDAY_LABELS_LONG = [
-  'Segunda-feira',
-  'Terça-feira',
-  'Quarta-feira',
-  'Quinta-feira',
-  'Sexta-feira',
-  'Sábado',
-  'Domingo',
+  'Lunedì',
+  'Martedì',
+  'Mercoledì',
+  'Giovedì',
+  'Venerdì',
+  'Sabato',
+  'Domenica',
 ];
 
 function mondayFirstIndex(dateStr: string): number | null {

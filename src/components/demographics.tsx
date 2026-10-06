@@ -5,12 +5,12 @@ import { formatPercent } from '../lib/format';
 import type { DemographicRow } from '../lib/linkedin-export';
 
 const CATEGORY_LABELS: Record<string, string> = {
-  Company: 'Empresa',
-  'Job title': 'Cargo',
-  Industry: 'Setor',
-  Location: 'Localização',
-  Seniority: 'Senioridade',
-  'Company size': 'Tamanho da empresa',
+  Company: 'Azienda',
+  'Job title': 'Qualifica',
+  Industry: 'Settore',
+  Location: 'Località',
+  Seniority: 'Anzianità',
+  'Company size': 'Dimensione azienda',
 };
 
 export function Demographics({ rows }: { rows: DemographicRow[] }) {
