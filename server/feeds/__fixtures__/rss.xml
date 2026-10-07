@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <channel>
+    <title>Blog Frontend</title>
+    <link>https://blog.example.com/</link>
+    <item>
+      <title>React Compiler di default</title>
+      <link>https://blog.example.com/react-compiler/?utm_source=rss</link>
+      <guid>https://blog.example.com/?p=1</guid>
+      <pubDate>Mon, 05 Oct 2026 09:00:00 GMT</pubDate>
+      <dc:creator>Ada</dc:creator>
+      <description><![CDATA[<p>Il <b>compilatore</b> è ora attivo di default.</p>]]></description>
+    </item>
+    <item>
+      <title>Tesla&amp;#8217;s notizia &amp;amp; senza data</title>
+      <link>/relativo</link>
+    </item>
+  </channel>
+</rss>

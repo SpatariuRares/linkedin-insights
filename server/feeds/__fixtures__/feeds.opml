@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<opml version="2.0">
+  <head><title>Iscrizioni</title></head>
+  <body>
+    <outline text="Tech" title="Tech">
+      <outline type="rss" text="Blog Frontend" xmlUrl="https://blog.example.com/feed.xml" htmlUrl="https://blog.example.com"/>
+      <outline text="AI">
+        <outline type="rss" text="AI Weekly" title="AI Weekly (Atom)" xmlUrl="https://ai.example.org/atom.xml"/>
+      </outline>
+    </outline>
+    <outline type="rss" text="Doppione" xmlUrl="https://ai.example.org/atom.xml"/>
+    <outline type="rss" text="Rotto" xmlUrl="not a url"/>
+    <outline type="rss" xmlUrl="https://senzanome.example.net/rss"/>
+  </body>
+</opml>

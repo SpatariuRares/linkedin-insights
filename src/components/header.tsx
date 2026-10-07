@@ -1,12 +1,14 @@
-import { BarChart3, CalendarDays, Database, TrendingUp } from 'lucide-react';
+import { BarChart3, CalendarDays, Database, Newspaper, Settings, TrendingUp } from 'lucide-react';
 import { ThemeToggle } from './theme-toggle';
 import { cn } from '../lib/utils';
 
-export type Tab = 'dashboard' | 'calendar' | 'data';
+export type Tab = 'dashboard' | 'news' | 'calendar' | 'settings' | 'data';
 
 const TABS: { id: Tab; label: string; icon: typeof BarChart3 }[] = [
   { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
+  { id: 'news', label: 'News', icon: Newspaper },
   { id: 'calendar', label: 'Calendario', icon: CalendarDays },
+  { id: 'settings', label: 'Impostazioni', icon: Settings },
   { id: 'data', label: 'Dati', icon: Database },
 ];
 
@@ -40,7 +42,7 @@ export function Header({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
               )}
             >
               <Icon className="size-4" />
-              <span className="hidden sm:inline">{label}</span>
+              <span className="hidden lg:inline">{label}</span>
             </button>
           ))}
           <ThemeToggle />

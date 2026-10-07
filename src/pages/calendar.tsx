@@ -41,12 +41,14 @@ export function CalendarPage({
   onChange,
   posts,
   bestWeekday,
+  onOpenDraft,
 }: {
   calendar: CalendarState;
   onChange: (c: CalendarState) => void;
   posts: TrackedPost[];
   /** 0 = Monday, from the analytics; null when there's no data yet. */
   bestWeekday: { index: number; label: string } | null;
+  onOpenDraft: (draftId: number) => void;
 }) {
   const today = dayKey(new Date());
   const [cursor, setCursor] = useState(() => {
@@ -415,6 +417,10 @@ export function CalendarPage({
           entry={editing}
           pillars={calendar.pillars}
           posts={posts}
+          onOpenDraft={(id) => {
+            setEditing(null);
+            onOpenDraft(id);
+          }}
           onClose={() => setEditing(null)}
           onSave={(e) => {
             upsert(e);

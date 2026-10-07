@@ -31,6 +31,8 @@ export type CalendarEntry = {
   pillarId: string | null;
   status: PostStatus;
   postUrl: string | null;
+  /** Set by the server when the entry was created from an agent draft. */
+  draftId?: number;
 };
 
 export type CalendarState = { entries: CalendarEntry[]; pillars: Pillar[]; postsPerWeek: number };

@@ -21,6 +21,7 @@ export function EntryDialog({
   onSave,
   onDelete,
   onClose,
+  onOpenDraft,
 }: {
   entry: CalendarEntry;
   pillars: Pillar[];
@@ -28,6 +29,7 @@ export function EntryDialog({
   onSave: (e: CalendarEntry) => void;
   onDelete: (id: string) => void;
   onClose: () => void;
+  onOpenDraft?: (draftId: number) => void;
 }) {
   const [draft, setDraft] = useState(entry);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -73,6 +75,14 @@ export function EntryDialog({
         </div>
 
         <div className="space-y-4">
+          {entry.draftId !== undefined && onOpenDraft && (
+            <div className="bg-secondary flex items-center justify-between gap-3 rounded-lg px-3 py-2">
+              <p className="text-foreground text-sm">Creato dall&apos;agente, con le sue fonti.</p>
+              <Button size="sm" variant="outline" onClick={() => onOpenDraft(entry.draftId!)}>
+                Apri bozza e fonti
+              </Button>
+            </div>
+          )}
           <div className="space-y-1.5">
             <Label htmlFor="entry-title">Hook / titolo</Label>
             <Input

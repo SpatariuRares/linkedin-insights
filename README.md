@@ -34,13 +34,38 @@ Fork di [obrenoalvim/linkedin-insights](https://github.com/obrenoalvim/linkedin-
 
 ```bash
 npm install
-npm run dev
+cp .env.example .env   # poi compila i valori
+npm run dev            # interfaccia + server locale
 ```
 
 Apri http://localhost:5173 e carica l'export: profilo LinkedIn → Analytics → Contenuti →
 Esporta (365 giorni). Ripeti ogni 1–2 settimane.
 
-I dati sono nel `localStorage` del browser: scarica un backup dalla pagina **Dati** ogni tanto.
+I dati stanno nel database SQLite `data/app.db` (escluso da git). Il server ascolta solo su
+`127.0.0.1:8787`. Al primo avvio, i dati della vecchia versione salvati nel browser vengono
+spostati nel database. Scarica comunque un backup dalla pagina **Dati** ogni tanto.
+
+### Rizzo Flow (facoltativo)
+
+[Rizzo Flow](https://github.com/Rizzo-AI-Academy/rizzo-flow) valuta in locale la pertinenza delle
+news. Va installato una volta, fuori da questo progetto (servono Python ≥ 3.11 e
+[uv](https://docs.astral.sh/uv/); il modello pesa circa 4,4 GB e usa circa 5,6 GB di memoria):
+
+```bash
+git clone https://github.com/Rizzo-AI-Academy/rizzo-flow ~/rizzo-flow
+cd ~/rizzo-flow
+uv sync --locked
+uv run rizzo download
+```
+
+Imposta `RIZZO_FLOW_DIR=~/rizzo-flow` in `.env`, poi:
+
+```bash
+npm run dev:full   # interfaccia + server + Rizzo Flow (http://127.0.0.1:8017)
+```
+
+Se `RIZZO_FLOW_DIR` manca o la cartella non esiste, `dev:full` lo segnala e avvia comunque il
+resto.
 
 ## Limiti dell'export
 

@@ -8,18 +8,18 @@ import { formatDateLong } from '../lib/format';
 
 export function DataPage({
   state,
-  persisted,
+  saveError,
   onFile,
   busy,
   onReplace,
   onReset,
 }: {
   state: AppState;
-  persisted: boolean;
+  saveError: boolean;
   onFile: (file: File) => void;
   busy: boolean;
-  onReplace: (s: AppState) => void;
-  onReset: () => void;
+  onReplace: (s: AppState) => Promise<void>;
+  onReset: () => Promise<void>;
 }) {
   const restoreRef = useRef<HTMLInputElement>(null);
   const [confirmReset, setConfirmReset] = useState(false);
@@ -39,13 +39,12 @@ export function DataPage({
       <div>
         <h1 className="font-display text-foreground text-2xl font-semibold">Dati</h1>
         <p className="text-muted-foreground text-sm">
-          Tutto resta nel browser di questo computer. Scarica un backup ogni tanto: se cancelli i
-          dati del sito, lo storico si perde.
+          Tutto resta su questo computer, nel file <span className="font-mono">data/app.db</span>{' '}
+          del progetto. Scarica un backup ogni tanto.
         </p>
-        {!persisted && (
+        {saveError && (
           <p className="text-destructive mt-2 text-sm">
-            Il browser non permette di salvare: le modifiche andranno perse alla chiusura. Scarica
-            un backup.
+            L&apos;ultima modifica non è stata salvata: controlla che il server locale sia avviato.
           </p>
         )}
       </div>
@@ -108,11 +107,18 @@ export function DataPage({
               const file = e.target.files?.[0];
               e.target.value = '';
               if (!file) return;
+              let parsed;
               try {
-                onReplace(parseState(await file.text()));
-                toast.success('Backup ripristinato.');
+                parsed = parseState(await file.text());
               } catch {
                 toast.error('Questo file non è un backup valido.');
+                return;
+              }
+              try {
+                await onReplace(parsed);
+                toast.success('Backup ripristinato.');
+              } catch (err) {
+                toast.error(err instanceof Error ? err.message : 'Ripristino non riuscito.');
               }
             }}
           />
@@ -121,10 +127,14 @@ export function DataPage({
               <Button
                 variant="destructive"
                 size="sm"
-                onClick={() => {
-                  onReset();
+                onClick={async () => {
                   setConfirmReset(false);
-                  toast.success('Dati cancellati.');
+                  try {
+                    await onReset();
+                    toast.success('Dati cancellati.');
+                  } catch (err) {
+                    toast.error(err instanceof Error ? err.message : 'Cancellazione non riuscita.');
+                  }
                 }}
               >
                 Conferma: cancella tutto
