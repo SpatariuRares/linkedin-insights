@@ -1,6 +1,7 @@
 import type { Pillar } from '../../lib/calendar';
-import { DEFAULT_FILTERS, type ArticleFilters } from '../../lib/news';
+import { DEFAULT_FILTERS, type ArticleFilters, type Feed } from '../../lib/news';
 import { Button } from '../ui';
+import { cn } from '../../lib/utils';
 
 const selectClass =
   'border-input bg-background focus-visible:ring-ring h-8 rounded-md border px-2 text-xs shadow-sm focus-visible:ring-2 focus-visible:outline-none';
@@ -16,10 +17,12 @@ export function FiltersBar({
   filters,
   onChange,
   pillars,
+  feeds,
 }: {
   filters: ArticleFilters;
   onChange: (f: ArticleFilters) => void;
   pillars: Pillar[];
+  feeds: Feed[];
 }) {
   const set = <K extends keyof ArticleFilters>(k: K, v: ArticleFilters[K]) =>
     onChange({ ...filters, [k]: v });
@@ -60,6 +63,22 @@ export function FiltersBar({
             {p.name}
           </option>
         ))}
+      </select>
+      <select
+        aria-label="Fonte"
+        className={cn(selectClass, 'max-w-56')}
+        value={filters.feedId ?? ''}
+        onChange={(e) => set('feedId', e.target.value ? Number(e.target.value) : null)}
+      >
+        <option value="">Tutte le fonti</option>
+        {[...feeds]
+          .sort((a, b) => a.title.localeCompare(b.title))
+          .map((f) => (
+            <option key={f.id} value={f.id}>
+              {f.title}
+              {f.enabled ? '' : ' (disattivato)'}
+            </option>
+          ))}
       </select>
       <label className="text-muted-foreground inline-flex items-center gap-1.5 text-xs">
         <input

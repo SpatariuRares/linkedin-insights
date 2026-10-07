@@ -49,6 +49,16 @@ describe('parseFeed', () => {
     });
   });
 
+  it('reads the name out of a structured RSS <author> (blog.google)', async () => {
+    const xml = `<?xml version="1.0"?><rss version="2.0"><channel><title>AI</title>
+      <item><title>Playground</title><link>https://blog.google/ai/playground/</link>
+        <author xmlns:author="http://www.w3.org/2005/Atom"><name>Maryam K</name>
+          <title>Software Engineer</title><company/></author></item>
+    </channel></rss>`;
+    const feed = await parseFeed(xml);
+    expect(feed.items[0]).toMatchObject({ title: 'Playground', author: 'Maryam K' });
+  });
+
   it('recognises a feed by content type or by its first tag', () => {
     expect(looksLikeFeed('application/rss+xml; charset=utf-8', '')).toBe(true);
     expect(looksLikeFeed('text/plain', '  <?xml version="1.0"?><rss>')).toBe(true);

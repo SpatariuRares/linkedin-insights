@@ -7,6 +7,10 @@ import {
   AVAILABLE_KINDS,
   KIND_LABELS,
   PRESETS,
+  groupModels,
+  modelLabel,
+  nameAfterModelChange,
+  type ModelInfo,
   type Profile,
   type ProfileInput,
   type ProfileKind,
@@ -18,6 +22,55 @@ const selectClass =
 
 const errorMessage = (err: unknown) => (err instanceof Error ? err.message : String(err));
 
+/** Every model the provider lists, grouped by provider, with a search box to narrow ~500 entries. */
+function ModelPicker({
+  models,
+  value,
+  onChange,
+}: {
+  models: ModelInfo[];
+  value: string;
+  onChange: (id: string) => void;
+}) {
+  const [query, setQuery] = useState('');
+  const groups = groupModels(models, query, value);
+  const shown = groups.reduce((n, g) => n + g.models.length, 0);
+
+  return (
+    <div className="space-y-1.5">
+      <Input
+        type="search"
+        aria-label="Cerca modello"
+        placeholder="Cerca: claude, gpt, gemini, gratis…"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+      />
+      <select
+        id="profile-model"
+        className={selectClass}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        required
+      >
+        {!value && <option value="">Scegli un modello…</option>}
+        {groups.map((g) => (
+          <optgroup key={g.label} label={g.label}>
+            {g.models.map((m) => (
+              <option key={m.id} value={m.id}>
+                {modelLabel(m)}
+              </option>
+            ))}
+          </optgroup>
+        ))}
+      </select>
+      <p className="text-muted-foreground text-xs">
+        {query.trim() ? `${shown} di ${models.length} modelli` : `${models.length} modelli`} ·
+        prezzi in dollari per milione di token (ingresso / uscita)
+      </p>
+    </div>
+  );
+}
+
 function ProfileForm({
   initial,
   onSave,
@@ -28,7 +81,8 @@ function ProfileForm({
   onCancel: () => void;
 }) {
   const [draft, setDraft] = useState<ProfileInput>(initial);
-  const [models, setModels] = useState<string[]>([]);
+  const [models, setModels] = useState<ModelInfo[]>([]);
+  const [manual, setManual] = useState(false);
   const [saving, setSaving] = useState(false);
   const isHttp = draft.kind === 'openai-compatible';
 
@@ -46,6 +100,15 @@ function ProfileForm({
 
   const set = <K extends keyof ProfileInput>(k: K, v: ProfileInput[K]) =>
     setDraft((d) => ({ ...d, [k]: v }));
+
+  const chooseModel = (id: string) => {
+    const next = models.find((m) => m.id === id);
+    setDraft((d) => ({
+      ...d,
+      model: id,
+      name: next ? nameAfterModelChange(d.name, d.model, next, models) : d.name,
+    }));
+  };
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -111,24 +174,30 @@ function ProfileForm({
           </div>
         )}
         <div className="space-y-1.5">
-          <Label htmlFor="profile-model">Modello</Label>
-          <Input
-            id="profile-model"
-            list="profile-models"
-            value={draft.model}
-            onChange={(e) => set('model', e.target.value)}
-            placeholder={
-              isHttp ? 'anthropic/claude-sonnet-5.5' : 'vuoto = modello predefinito della CLI'
-            }
-            required={isHttp}
-          />
-          <datalist id="profile-models">
-            {models.map((m) => (
-              <option key={m} value={m} />
-            ))}
-          </datalist>
-          {models.length > 0 && (
-            <p className="text-muted-foreground text-xs">{models.length} modelli disponibili</p>
+          <div className="flex items-center justify-between gap-2">
+            <Label htmlFor="profile-model">Modello</Label>
+            {isHttp && models.length > 0 && (
+              <button
+                type="button"
+                className="text-primary text-xs underline"
+                onClick={() => setManual((m) => !m)}
+              >
+                {manual ? "Scegli dall'elenco" : 'Scrivi a mano'}
+              </button>
+            )}
+          </div>
+          {isHttp && models.length > 0 && !manual ? (
+            <ModelPicker models={models} value={draft.model} onChange={chooseModel} />
+          ) : (
+            <Input
+              id="profile-model"
+              value={draft.model}
+              onChange={(e) => set('model', e.target.value)}
+              placeholder={
+                isHttp ? 'anthropic/claude-sonnet-5.5' : 'vuoto = modello predefinito della CLI'
+              }
+              required={isHttp}
+            />
           )}
         </div>
         {isHttp && (

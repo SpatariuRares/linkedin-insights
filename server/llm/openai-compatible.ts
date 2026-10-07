@@ -1,4 +1,5 @@
 import type { Fetcher } from '../http.ts';
+import type { ModelInfo } from '../../src/lib/profiles';
 import { LlmError, type GenerateInput, type GenerateResult, type Profile } from './types.ts';
 
 type ChatResponse = {
@@ -90,19 +91,45 @@ export async function generateOpenAiCompatible(
   };
 }
 
-/** The provider's model list, when it exposes one (OpenRouter and OpenAI do, without a key). */
+type ModelEntry = {
+  id?: unknown;
+  name?: unknown;
+  context_length?: unknown;
+  pricing?: { prompt?: unknown; completion?: unknown };
+};
+
+/** OpenRouter prices are USD per token as strings; "-1" marks routers with no fixed price. */
+function perMillion(value: unknown): number | null {
+  const n = Number(value);
+  if (typeof value !== 'string' || !Number.isFinite(n) || n < 0) return null;
+  return Math.round(n * 1_000_000 * 1000) / 1000;
+}
+
+/**
+ * The provider's model list, when it exposes one (OpenRouter and OpenAI do, without a key).
+ * Name, context and price are OpenRouter extras; plain OpenAI-style lists only carry the id.
+ */
 export async function listModels(
   baseUrl: string,
   deps: { fetcher: Fetcher; key?: string },
-): Promise<string[]> {
+): Promise<ModelInfo[]> {
   const res = await deps.fetcher(`${baseUrl.replace(/\/+$/, '')}/models`, {
     headers: deps.key ? { Authorization: `Bearer ${deps.key}` } : {},
     signal: AbortSignal.timeout(15_000),
   });
   if (!res.ok) throw new LlmError(`Elenco modelli non disponibile (errore ${res.status}).`);
-  const data = (await res.json()) as { data?: { id?: string }[] };
+  const data = (await res.json()) as { data?: ModelEntry[] };
   return (data.data ?? [])
-    .map((m) => m.id)
-    .filter((id): id is string => typeof id === 'string')
-    .sort();
+    .filter((m): m is ModelEntry & { id: string } => typeof m.id === 'string' && m.id !== '')
+    .map((m) => {
+      const input = perMillion(m.pricing?.prompt);
+      const output = perMillion(m.pricing?.completion);
+      return {
+        id: m.id,
+        name: typeof m.name === 'string' && m.name.trim() ? m.name.trim() : m.id,
+        contextLength: typeof m.context_length === 'number' ? m.context_length : null,
+        price: input !== null && output !== null ? { input, output } : null,
+      };
+    })
+    .sort((a, b) => a.id.localeCompare(b.id));
 }

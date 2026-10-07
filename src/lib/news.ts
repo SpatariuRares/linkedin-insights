@@ -51,6 +51,8 @@ export type ArticleFilters = {
   sort: 'date' | 'relevance';
   minRelevance: number;
   pillarId: string;
+  /** null = every source. */
+  feedId: number | null;
   postWorthyOnly: boolean;
 };
 
@@ -58,6 +60,7 @@ export const DEFAULT_FILTERS: ArticleFilters = {
   sort: 'date',
   minRelevance: 0,
   pillarId: '',
+  feedId: null,
   postWorthyOnly: false,
 };
 

@@ -22,8 +22,9 @@ const scratch = document.createElement('div');
  * Feeds often carry HTML (tags, `&#8217;`, `&amp;`) inside titles and summaries. Letting an HTML
  * parser read it strips the tags and decodes every entity in one go.
  */
-function clean(text: string | undefined | null): string {
-  if (!text) return '';
+function clean(text: unknown): string {
+  // rss-parser hands back objects for elements with children; one odd field must not sink the feed.
+  if (!text || typeof text !== 'string') return '';
   scratch.innerHTML = text.replace(/<(br|\/p|\/div|\/li)\b[^>]*>/gi, ' $&');
   return (scratch.textContent ?? '').replace(/\s+/g, ' ').trim();
 }
@@ -31,6 +32,13 @@ function clean(text: string | undefined | null): string {
 function snippetOf(item: Parser.Item): string {
   const text = clean(item.contentSnippet || item.summary || item.content);
   return text.length > SNIPPET_MAX ? `${text.slice(0, SNIPPET_MAX - 1).trimEnd()}…` : text;
+}
+
+/** `<author>` is usually text, but some feeds (blog.google) nest `<name>`, which xml2js arrays. */
+function authorOf(item: Parser.Item): string | null {
+  const raw: unknown = item.creator ?? (item as { author?: unknown }).author;
+  const name = raw && typeof raw === 'object' ? (raw as { name?: unknown }).name : raw;
+  return clean(Array.isArray(name) ? name[0] : name) || null;
 }
 
 function isoOrNull(value: string | undefined): string | null {
@@ -59,7 +67,7 @@ export async function parseFeed(xml: string, baseUrl?: string): Promise<ParsedFe
         url: resolve(item.link),
         title: clean(item.title) || '(senza titolo)',
         snippet: snippetOf(item),
-        author: clean(item.creator ?? (item as { author?: string }).author) || null,
+        author: authorOf(item),
         publishedAt: isoOrNull(item.isoDate ?? item.pubDate),
       }))
       .filter((item) => item.url || item.guid),

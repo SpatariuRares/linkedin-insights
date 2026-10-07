@@ -186,4 +186,36 @@ export const MIGRATIONS: string[] = [
     scored_at        TEXT NOT NULL
   );
   `,
+  // 6 — full-text search over article titles and summaries (news search, related articles)
+  `
+  CREATE VIRTUAL TABLE articles_fts USING fts5(
+    title, snippet,
+    content = 'articles', content_rowid = 'id',
+    tokenize = 'unicode61 remove_diacritics 2'
+  );
+  INSERT INTO articles_fts (rowid, title, snippet) SELECT id, title, snippet FROM articles;
+  CREATE TRIGGER articles_fts_insert AFTER INSERT ON articles BEGIN
+    INSERT INTO articles_fts (rowid, title, snippet) VALUES (new.id, new.title, new.snippet);
+  END;
+  CREATE TRIGGER articles_fts_delete AFTER DELETE ON articles BEGIN
+    INSERT INTO articles_fts (articles_fts, rowid, title, snippet)
+      VALUES ('delete', old.id, old.title, old.snippet);
+  END;
+  CREATE TRIGGER articles_fts_update AFTER UPDATE OF title, snippet ON articles BEGIN
+    INSERT INTO articles_fts (articles_fts, rowid, title, snippet)
+      VALUES ('delete', old.id, old.title, old.snippet);
+    INSERT INTO articles_fts (rowid, title, snippet) VALUES (new.id, new.title, new.snippet);
+  END;
+  `,
+  // 7 — embeddings for search by meaning (one model at a time) and their settings
+  `
+  CREATE TABLE article_embeddings (
+    article_id INTEGER PRIMARY KEY REFERENCES articles(id) ON DELETE CASCADE,
+    model      TEXT NOT NULL,
+    vector     BLOB NOT NULL,
+    created_at TEXT NOT NULL
+  );
+  INSERT INTO settings (key, value) VALUES
+    ('embeddings', '{"enabled":true,"baseUrl":"https://openrouter.ai/api/v1","apiKeyEnv":"OPENROUTER_API_KEY","model":"baai/bge-m3"}');
+  `,
 ];

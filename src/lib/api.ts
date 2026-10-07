@@ -11,9 +11,10 @@ import type {
   RefreshSummary,
   TriageStatus,
 } from './news';
-import type { Profile, ProfileInput, ProfileTest } from './profiles';
+import type { ModelInfo, Profile, ProfileInput, ProfileTest } from './profiles';
 import type { Voice } from './voice';
 import type { Draft } from './drafts';
+import type { TopicGraph } from './topic-graph';
 
 export class ApiError extends Error {
   status: number;
@@ -66,6 +67,9 @@ export const api = {
     request<{ added: number; error: string | null; feed: Feed }>('POST', `/feeds/${id}/refresh`),
   feedStatus: () => request<FeedStatus>('GET', '/feeds/status'),
   refreshAllFeeds: () => request<RefreshSummary>('POST', '/feeds/refresh'),
+  topicGraph: ({ days, archived }: { days: number; archived: boolean }) =>
+    request<TopicGraph>('GET', `/articles/graph?days=${days}&archived=${archived}`),
+  relatedArticles: (id: number) => request<Article[]>('GET', `/articles/${id}/related`),
   articleCounts: () => request<Record<ArticleState, number>>('GET', '/articles/counts'),
   setArticleState: (id: number, state: Exclude<ArticleState, 'archived'>) =>
     request<Article>('PATCH', `/articles/${id}`, { state }),
@@ -90,7 +94,7 @@ export const api = {
   deleteProfile: (id: number) => request<null>('DELETE', `/profiles/${id}`),
   testProfile: (id: number) => request<ProfileTest>('POST', `/profiles/${id}/test`),
   listModels: (baseUrl: string) =>
-    request<{ models: string[] }>('GET', `/models?baseUrl=${encodeURIComponent(baseUrl)}`),
+    request<{ models: ModelInfo[] }>('GET', `/models?baseUrl=${encodeURIComponent(baseUrl)}`),
   triageStatus: () => request<TriageStatus>('GET', '/triage/status'),
   runTriage: () => request<TriageStatus & { scored: number }>('POST', '/triage/run'),
   listArticles: (
@@ -100,7 +104,9 @@ export const api = {
       sort?: 'date' | 'relevance';
       minRelevance?: number;
       pillarId?: string;
+      feedId?: number;
       postWorthy?: boolean;
+      q?: string;
     } = {},
   ) => {
     const params = new URLSearchParams();

@@ -121,15 +121,37 @@ describe('profiles API', () => {
     expect(res.error).toMatch(/Chiave API rifiutata.*No auth credentials/);
   });
 
-  it('lists the provider models', async () => {
+  it('lists the provider models with name, context and price per million tokens', async () => {
     const fetcher: Fetcher = async () =>
       Response.json({
-        data: [{ id: 'openai/gpt-5.6-terra' }, { id: 'anthropic/claude-sonnet-5.5' }],
+        data: [
+          {
+            id: 'openai/gpt-5.6-terra',
+            name: 'OpenAI: GPT-5.6 Terra',
+            context_length: 1_050_000,
+            pricing: { prompt: '0.000002', completion: '0.000012' },
+          },
+          {
+            id: 'openrouter/auto',
+            name: 'Auto Router',
+            pricing: { prompt: '-1', completion: '-1' },
+          },
+          { id: 'llama3.2:latest', object: 'model', owned_by: 'library' },
+        ],
       });
     const { app } = setup({}, fetcher);
     const res = await app.request('/api/models?baseUrl=https://openrouter.ai/api/v1');
     expect(await res.json()).toEqual({
-      models: ['anthropic/claude-sonnet-5.5', 'openai/gpt-5.6-terra'],
+      models: [
+        { id: 'llama3.2:latest', name: 'llama3.2:latest', contextLength: null, price: null },
+        {
+          id: 'openai/gpt-5.6-terra',
+          name: 'OpenAI: GPT-5.6 Terra',
+          contextLength: 1_050_000,
+          price: { input: 2, output: 12 },
+        },
+        { id: 'openrouter/auto', name: 'Auto Router', contextLength: null, price: null },
+      ],
     });
   });
 });

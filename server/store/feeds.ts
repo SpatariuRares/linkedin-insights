@@ -1,6 +1,7 @@
 import type { DB } from '../db.ts';
 import type { FeedItem } from '../feeds/parse.ts';
 import { canonicalUrl } from '../feeds/canonical.ts';
+import { countMatched, ftsMatch, relatedTerms, searchTerms } from '../articles/search.ts';
 
 export type Feed = {
   id: number;
@@ -198,6 +199,8 @@ export type ArticleQuery = {
   minRelevance?: number;
   pillarId?: string;
   postWorthy?: boolean;
+  /** Free text matched against title and summary; every meaningful word must appear. */
+  q?: string;
 };
 
 /**
@@ -214,6 +217,11 @@ export function listArticles(db: DB, opts: ArticleQuery = {}): Article[] {
   if (opts.feedId !== undefined) {
     where.push('a.feed_id = ?');
     params.push(opts.feedId);
+  }
+  const terms = opts.q ? searchTerms(opts.q) : [];
+  if (terms.length) {
+    where.push('a.id IN (SELECT rowid FROM articles_fts WHERE articles_fts MATCH ?)');
+    params.push(ftsMatch(terms, 'all'));
   }
   const scoreFilters: string[] = [];
   if (opts.minRelevance !== undefined) {
@@ -243,6 +251,46 @@ export function listArticles(db: DB, opts: ArticleQuery = {}): Article[] {
          ORDER BY ${order} LIMIT ?`,
       )
       .all(...params) as ArticleRow[]
+  ).map(toArticle);
+}
+
+/**
+ * Other articles on the same story as `article`: any of its headline words may match, ranked by
+ * bm25 (title weighs more than summary), then cut to those sharing at least two words so a single
+ * common name ("Nvidia", "Cina") is not enough. Discarded articles stay out; archived ones count.
+ */
+export function relatedArticles(db: DB, article: Article, limit = 10): Article[] {
+  const terms = relatedTerms(article.title);
+  if (!terms.length) return [];
+  const minShared = Math.min(2, terms.length);
+  const rows = db
+    .prepare(
+      `${ARTICLE_SELECT}
+       JOIN (SELECT rowid AS id, bm25(articles_fts, 4.0, 1.0) AS rank
+             FROM articles_fts WHERE articles_fts MATCH ? ORDER BY rank LIMIT 100) m ON m.id = a.id
+       WHERE a.id != ? AND a.state != 'discarded'
+       ORDER BY m.rank`,
+    )
+    .all(ftsMatch(terms, 'any'), article.id) as ArticleRow[];
+  return rows
+    .filter((r) => countMatched(terms, `${r.title} ${r.snippet}`) >= minShared)
+    .slice(0, limit)
+    .map(toArticle);
+}
+
+/** The articles the topic graph is drawn from: recent, not discarded, newest first. */
+export function graphArticles(
+  db: DB,
+  opts: { since: Date; includeArchived: boolean; limit: number },
+): Article[] {
+  const states = opts.includeArchived ? "('inbox', 'saved', 'archived')" : "('inbox', 'saved')";
+  return (
+    db
+      .prepare(
+        `${ARTICLE_SELECT} WHERE a.state IN ${states} AND a.published_at >= ?
+         ORDER BY a.published_at DESC, a.id DESC LIMIT ?`,
+      )
+      .all(opts.since.toISOString(), opts.limit) as ArticleRow[]
   ).map(toArticle);
 }
 

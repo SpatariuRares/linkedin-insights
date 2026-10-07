@@ -10,6 +10,8 @@ import { generate as llmGenerate } from './llm/index.ts';
 import type { GenerateFn } from './agent/run.ts';
 import { FeedScheduler } from './feeds/scheduler.ts';
 import { TriageRunner } from './triage/runner.ts';
+import { EmbeddingRunner } from './embeddings/runner.ts';
+import { embeddingRoutes } from './routes/embeddings.ts';
 import {
   appStateSchema,
   calendarSchema,
@@ -38,6 +40,7 @@ export type AppDeps = {
   fetcher?: Fetcher;
   scheduler?: FeedScheduler;
   triage?: TriageRunner;
+  embedder?: EmbeddingRunner;
   env?: Record<string, string | undefined>;
   /** Text generation; tests pass a fake so no model is ever called. */
   generate?: GenerateFn;
@@ -50,6 +53,7 @@ export function createApp({
   scheduler = new FeedScheduler({ db, fetcher, now }),
   triage = new TriageRunner({ db, fetcher, now }),
   env = process.env,
+  embedder = new EmbeddingRunner({ db, fetcher, env, now }),
   generate = (profile, input) => llmGenerate(profile, input, { fetcher, env }),
 }: AppDeps) {
   const app = new Hono().basePath('/api');
@@ -118,6 +122,7 @@ export function createApp({
   app.route('/', profileRoutes({ db, fetcher, env, now }));
   app.route('/', voiceRoutes({ db }));
   app.route('/', draftRoutes({ db, fetcher, generate, now }));
+  app.route('/', embeddingRoutes({ db, embedder }));
 
   return app;
 }

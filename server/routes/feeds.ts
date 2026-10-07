@@ -8,6 +8,9 @@ import { discoverFeeds } from '../feeds/discover.ts';
 import { refreshFeed } from '../feeds/refresh.ts';
 import { parseOpml } from '../feeds/opml.ts';
 import { getArticleText } from '../articles/text.ts';
+import { buildTopicGraph } from '../articles/graph.ts';
+import { nearest, RELATED_MIN } from '../embeddings/similar.ts';
+import { getEmbeddingConfig, loadEmbeddings } from '../store/embeddings.ts';
 import type { FeedScheduler } from '../feeds/scheduler.ts';
 import type { TriageRunner } from '../triage/runner.ts';
 import {
@@ -17,11 +20,19 @@ import {
   findFeedByUrl,
   getArticle,
   getFeed,
+  graphArticles,
   listArticles,
   listFeeds,
+  relatedArticles,
   setArticleState,
   updateFeed,
 } from '../store/feeds.ts';
+
+/** The model whose vectors to use, or null when search by meaning is off. */
+function activeEmbeddingModel(db: DB): string | null {
+  const config = getEmbeddingConfig(db);
+  return config.enabled ? config.model : null;
+}
 
 export type FeedDeps = {
   db: DB;
@@ -38,6 +49,14 @@ const patchSchema = z.object({
   title: z.string().trim().min(1).max(200).optional(),
   enabled: z.boolean().optional(),
 });
+const graphQuery = z.object({
+  days: z.coerce.number().int().min(1).max(90).default(14),
+  archived: z
+    .enum(['true', 'false'])
+    .transform((v) => v === 'true')
+    .default(false),
+});
+const GRAPH_MAX_ARTICLES = 400;
 const articlePatch = z.object({ state: z.enum(['inbox', 'saved', 'discarded']) });
 const articleQuery = z.object({
   state: z.enum(['inbox', 'saved', 'discarded', 'archived']).optional(),
@@ -46,6 +65,7 @@ const articleQuery = z.object({
   sort: z.enum(['date', 'relevance']).optional(),
   minRelevance: z.coerce.number().min(0).max(4).optional(),
   pillarId: z.string().min(1).optional(),
+  q: z.string().trim().max(200).optional(),
   postWorthy: z
     .enum(['true', 'false'])
     .transform((v) => v === 'true')
@@ -156,6 +176,51 @@ export function feedRoutes({ db, fetcher, now, scheduler, triage }: FeedDeps) {
   });
 
   app.get('/articles/counts', (c) => c.json(countArticles(db)));
+
+  /** News of the last `days` linked by shared headline words and grouped into topics. */
+  app.get('/articles/graph', (c) => {
+    const query = graphQuery.safeParse(c.req.query());
+    if (!query.success) return c.json({ error: 'Parametri non validi.' }, 400);
+    const articles = graphArticles(db, {
+      since: new Date(now().getTime() - query.data.days * 86_400_000),
+      includeArchived: query.data.archived,
+      limit: GRAPH_MAX_ARTICLES,
+    });
+    const model = activeEmbeddingModel(db);
+    const vectors = model
+      ? loadEmbeddings(
+          db,
+          model,
+          articles.map((a) => a.id),
+        )
+      : undefined;
+    const graph = buildTopicGraph(articles, { vectors });
+    const byId = new Map(articles.map((a) => [a.id, a]));
+    return c.json({
+      ...graph,
+      nodes: graph.nodes.map((node) => ({ ...node, article: byId.get(node.id)! })),
+      total: articles.length,
+      truncated: articles.length === GRAPH_MAX_ARTICLES,
+    });
+  });
+
+  app.get('/articles/:id/related', (c) => {
+    const id = idParam(c);
+    const article = id ? getArticle(db, id) : null;
+    if (!article) return c.json({ error: 'Articolo non trovato.' }, 404);
+    // By meaning when this article has a vector, by shared headline words otherwise.
+    const model = activeEmbeddingModel(db);
+    const vectors = model ? loadEmbeddings(db, model) : null;
+    const own = vectors?.get(article.id);
+    if (!vectors || !own) return c.json(relatedArticles(db, article));
+    const found = nearest({ id: article.id, vector: own }, vectors, { k: 10, min: RELATED_MIN });
+    return c.json(
+      found.flatMap(({ id: other, similarity }) => {
+        const a = getArticle(db, other);
+        return a ? [{ ...a, similarity: Math.round(similarity * 100) / 100 }] : [];
+      }),
+    );
+  });
 
   app.get('/articles/:id/text', async (c) => {
     const id = idParam(c);

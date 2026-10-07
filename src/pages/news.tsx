@@ -1,11 +1,24 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Bookmark, ExternalLink, Newspaper, RefreshCw, Undo2, X } from 'lucide-react';
+import {
+  Bookmark,
+  ExternalLink,
+  Link2,
+  List,
+  Newspaper,
+  RefreshCw,
+  Search,
+  Share2,
+  Undo2,
+  X,
+} from 'lucide-react';
 import { toast } from 'sonner';
-import { Button, Card } from '../components/ui';
+import { Button, Card, Input } from '../components/ui';
 import { CreatePostPanel } from '../components/news/create-post-panel';
 import { ScoreBadges } from '../components/news/score-badges';
 import { TriageIndicator } from '../components/news/triage-indicator';
 import { FiltersBar } from '../components/news/filters-bar';
+import { RelatedArticles } from '../components/news/related-articles';
+import { TopicGraphView } from '../components/news/topic-graph-view';
 import type { Pillar } from '../lib/calendar';
 import { api } from '../lib/api';
 import {
@@ -14,6 +27,7 @@ import {
   type Article,
   type ArticleFilters,
   type ArticleState,
+  type Feed,
   type FeedStatus,
   type TriageStatus,
 } from '../lib/news';
@@ -61,6 +75,18 @@ function initialView(): View {
   return 'inbox';
 }
 
+type Mode = 'list' | 'graph';
+const MODE_KEY = 'linkedin-dashboard:news-mode';
+
+function initialMode(): Mode {
+  try {
+    if (localStorage.getItem(MODE_KEY) === 'graph') return 'graph';
+  } catch {
+    /* storage unavailable */
+  }
+  return 'list';
+}
+
 /** Which buttons each view offers, and where each one sends the article. */
 const ACTIONS: Record<View, { to: View; label: string; icon: typeof Bookmark }[]> = {
   inbox: [
@@ -96,11 +122,31 @@ export function NewsPage({
   const [articles, setArticles] = useState<Article[] | null>(null);
   const [counts, setCounts] = useState<Counts | null>(null);
   const [hasFeeds, setHasFeeds] = useState(true);
+  const [feeds, setFeeds] = useState<Feed[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [status, setStatus] = useState<FeedStatus | null>(null);
   const [selected, setSelected] = useState<number[]>([]);
   const [filters, setFilters] = useState<ArticleFilters>(initialFilters);
   const [triage, setTriage] = useState<TriageStatus | null>(null);
+  /** What the search box shows, and the debounced text actually sent to the server. */
+  const [query, setQuery] = useState('');
+  const [q, setQ] = useState('');
+  const [openRelated, setOpenRelated] = useState<number | null>(null);
+  const [mode, setMode] = useState<Mode>(initialMode);
+
+  const changeMode = (m: Mode) => {
+    setMode(m);
+    try {
+      localStorage.setItem(MODE_KEY, m);
+    } catch {
+      /* storage unavailable */
+    }
+  };
+
+  useEffect(() => {
+    const t = setTimeout(() => setQ(query.trim()), 300);
+    return () => clearTimeout(t);
+  }, [query]);
 
   const changeFilters = (f: ArticleFilters) => {
     setFilters(f);
@@ -116,7 +162,7 @@ export function NewsPage({
       s.includes(id) ? s.filter((x) => x !== id) : s.length >= 5 ? s : [...s, id],
     );
 
-  const load = useCallback(async (v: View, f: ArticleFilters) => {
+  const load = useCallback(async (v: View, f: ArticleFilters, search: string) => {
     try {
       const [list, c, feeds, st] = await Promise.all([
         api.listArticles({
@@ -124,7 +170,9 @@ export function NewsPage({
           sort: f.sort,
           minRelevance: f.minRelevance || undefined,
           pillarId: f.pillarId || undefined,
+          feedId: f.feedId ?? undefined,
           postWorthy: f.postWorthyOnly || undefined,
+          q: search || undefined,
         }),
         api.articleCounts(),
         api.listFeeds(),
@@ -134,14 +182,15 @@ export function NewsPage({
       setStatus(st);
       setCounts(c);
       setHasFeeds(feeds.length > 0);
+      setFeeds(feeds);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : String(err));
     }
   }, []);
 
   useEffect(() => {
-    void load(view, filters);
-  }, [load, view, filters]);
+    void load(view, filters, q);
+  }, [load, view, filters, q]);
 
   // While Rizzo Flow works through the backlog, refresh status and scores every few seconds.
   useEffect(() => {
@@ -152,7 +201,7 @@ export function NewsPage({
         const st = await api.triageStatus();
         if (stop) return;
         setTriage((prev) => {
-          if (prev && prev.pending !== st.pending) void load(view, filters);
+          if (prev && prev.pending !== st.pending) void load(view, filters, q);
           return st;
         });
         timer = setTimeout(tick, st.online && st.pending > 0 ? 8000 : 60000);
@@ -165,7 +214,7 @@ export function NewsPage({
       stop = true;
       clearTimeout(timer);
     };
-  }, [load, view, filters]);
+  }, [load, view, filters, q]);
 
   const changeView = (v: View) => {
     setArticles(null);
@@ -191,13 +240,13 @@ export function NewsPage({
           label: 'Annulla',
           onClick: async () => {
             await api.setArticleState(article.id, from);
-            void load(view, filters);
+            void load(view, filters, q);
           },
         },
       });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : String(err));
-      void load(view, filters);
+      void load(view, filters, q);
     }
   };
 
@@ -208,7 +257,7 @@ export function NewsPage({
       toast.success(
         `${res.added} nuovi articoli da ${res.refreshed} feed${res.failed ? ` · ${res.failed} con errori` : ''}.`,
       );
-      await load(view, filters);
+      await load(view, filters, q);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : String(err));
     } finally {
@@ -233,7 +282,7 @@ export function NewsPage({
               onRun={async () => {
                 try {
                   setTriage(await api.runTriage());
-                  await load(view, filters);
+                  await load(view, filters, q);
                 } catch (err) {
                   toast.error(err instanceof Error ? err.message : String(err));
                 }
@@ -268,109 +317,187 @@ export function NewsPage({
           <div
             className="bg-secondary inline-flex rounded-lg p-0.5"
             role="tablist"
-            aria-label="Viste"
+            aria-label="Modalità"
           >
-            {VIEWS.map((v) => (
+            {(
+              [
+                { id: 'list', label: 'Elenco', icon: List },
+                { id: 'graph', label: 'Grafo argomenti', icon: Share2 },
+              ] as const
+            ).map(({ id, label, icon: Icon }) => (
               <button
-                key={v.id}
+                key={id}
                 type="button"
                 role="tab"
-                aria-selected={view === v.id}
-                onClick={() => changeView(v.id)}
+                aria-selected={mode === id}
+                onClick={() => changeMode(id)}
                 className={cn(
-                  'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
-                  view === v.id
+                  'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                  mode === id
                     ? 'bg-card text-foreground shadow-sm'
                     : 'text-muted-foreground hover:text-foreground',
                 )}
               >
-                {v.label}
-                {counts && <span className="text-muted-foreground ml-1.5">{counts[v.id]}</span>}
+                <Icon className="size-3.5" />
+                {label}
               </button>
             ))}
           </div>
 
-          <FiltersBar filters={filters} onChange={changeFilters} pillars={pillars} />
-
-          {view === 'saved' && articles && articles.length > 0 && selected.length === 0 && (
-            <p className="text-muted-foreground text-sm">
-              Spunta da 1 a 5 news per scriverci un post.
-            </p>
-          )}
-
-          {articles?.length === 0 && (
-            <p className="text-muted-foreground text-sm">{current.empty}</p>
-          )}
-
-          {articles && articles.length > 0 && (
-            <ul className="space-y-3">
-              {orderForDisplay(articles, filtersActive).map((a, i, list) => (
-                <li key={a.id}>
-                  {filtersActive && !a.score && (i === 0 || list[i - 1].score) && (
-                    <p className="text-muted-foreground pt-2 pb-3 text-xs font-medium">
-                      Non ancora valutati da Rizzo Flow: restano visibili qualunque filtro tu usi.
-                    </p>
-                  )}
-                  <Card
-                    className={cn('flex gap-4 p-4', selected.includes(a.id) && 'ring-ring ring-2')}
-                  >
-                    {view === 'saved' && (
-                      <input
-                        type="checkbox"
-                        className="accent-primary mt-1 size-4 shrink-0"
-                        checked={selected.includes(a.id)}
-                        onChange={() => toggleSelected(a.id)}
-                        aria-label={`Usa per il post: ${a.title}`}
-                        disabled={!selected.includes(a.id) && selected.length >= 5}
-                      />
+          {mode === 'graph' ? (
+            <TopicGraphView />
+          ) : (
+            <>
+              <div
+                className="bg-secondary inline-flex rounded-lg p-0.5"
+                role="tablist"
+                aria-label="Viste"
+              >
+                {VIEWS.map((v) => (
+                  <button
+                    key={v.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={view === v.id}
+                    onClick={() => changeView(v.id)}
+                    className={cn(
+                      'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                      view === v.id
+                        ? 'bg-card text-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground',
                     )}
-                    <div className="min-w-0 flex-1 space-y-1.5">
-                      <p className="text-muted-foreground text-xs">
-                        {a.source} · {formatRelative(a.publishedAt)}
-                        {a.author ? ` · ${a.author}` : ''}
-                      </p>
-                      <a
-                        href={a.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-foreground inline-flex items-start gap-1.5 font-medium hover:underline"
-                      >
-                        {a.title}
-                        <ExternalLink className="text-muted-foreground mt-1 size-3 shrink-0" />
-                      </a>
-                      {a.snippet && (
-                        <p className="text-muted-foreground line-clamp-3 text-sm">{a.snippet}</p>
-                      )}
-                      <ScoreBadges score={a.score} pillars={pillars} />
-                    </div>
-                    <div className="flex shrink-0 flex-col gap-1">
-                      {ACTIONS[view].map(({ to, label, icon: Icon }) => (
-                        <Button
-                          key={to}
-                          variant={to === 'saved' ? 'outline' : 'ghost'}
-                          size="sm"
-                          onClick={() => move(a, to)}
-                          aria-label={`${label}: ${a.title}`}
-                          title={label}
-                        >
-                          <Icon className="size-3.5" />
-                          <span className="hidden sm:inline">{label}</span>
-                        </Button>
-                      ))}
-                    </div>
-                  </Card>
-                </li>
-              ))}
-            </ul>
-          )}
+                  >
+                    {v.label}
+                    {counts && <span className="text-muted-foreground ml-1.5">{counts[v.id]}</span>}
+                  </button>
+                ))}
+              </div>
 
-          {view === 'saved' && selected.length > 0 && (
-            <CreatePostPanel
-              articleIds={selected}
-              onClear={() => setSelected([])}
-              onCreated={onOpenDraft}
-              onOpenSettings={onOpenSettings}
-            />
+              <div className="relative">
+                <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                <Input
+                  type="search"
+                  aria-label="Cerca nelle news"
+                  placeholder="Cerca nelle news: OpenAI, Taiwan chip, regolamento AI…"
+                  className="pl-9"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                />
+              </div>
+
+              <FiltersBar
+                filters={filters}
+                onChange={changeFilters}
+                pillars={pillars}
+                feeds={feeds}
+              />
+
+              {view === 'saved' && articles && articles.length > 0 && selected.length === 0 && (
+                <p className="text-muted-foreground text-sm">
+                  Spunta da 1 a 5 news per scriverci un post.
+                </p>
+              )}
+
+              {articles?.length === 0 && (
+                <p className="text-muted-foreground text-sm">
+                  {q ? `Nessuna news trovata per «${q}» in questa vista.` : current.empty}
+                </p>
+              )}
+
+              {articles && articles.length > 0 && (
+                <ul className="space-y-3">
+                  {orderForDisplay(articles, filtersActive).map((a, i, list) => (
+                    <li key={a.id}>
+                      {filtersActive && !a.score && (i === 0 || list[i - 1].score) && (
+                        <p className="text-muted-foreground pt-2 pb-3 text-xs font-medium">
+                          Non ancora valutati da Rizzo Flow: restano visibili qualunque filtro tu
+                          usi.
+                        </p>
+                      )}
+                      <Card
+                        className={cn(
+                          'flex gap-4 p-4',
+                          selected.includes(a.id) && 'ring-ring ring-2',
+                        )}
+                      >
+                        {view === 'saved' && (
+                          <input
+                            type="checkbox"
+                            className="accent-primary mt-1 size-4 shrink-0"
+                            checked={selected.includes(a.id)}
+                            onChange={() => toggleSelected(a.id)}
+                            aria-label={`Usa per il post: ${a.title}`}
+                            disabled={!selected.includes(a.id) && selected.length >= 5}
+                          />
+                        )}
+                        <div className="min-w-0 flex-1 space-y-1.5">
+                          <p className="text-muted-foreground text-xs">
+                            {a.source} · {formatRelative(a.publishedAt)}
+                            {a.author ? ` · ${a.author}` : ''}
+                          </p>
+                          <a
+                            href={a.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-foreground inline-flex items-start gap-1.5 font-medium hover:underline"
+                          >
+                            {a.title}
+                            <ExternalLink className="text-muted-foreground mt-1 size-3 shrink-0" />
+                          </a>
+                          {a.snippet && (
+                            <p className="text-muted-foreground line-clamp-3 text-sm">
+                              {a.snippet}
+                            </p>
+                          )}
+                          <ScoreBadges score={a.score} pillars={pillars} />
+                          {openRelated === a.id && (
+                            <RelatedArticles
+                              articleId={a.id}
+                              onSaved={() => void load(view, filters, q)}
+                            />
+                          )}
+                        </div>
+                        <div className="flex shrink-0 flex-col gap-1">
+                          {ACTIONS[view].map(({ to, label, icon: Icon }) => (
+                            <Button
+                              key={to}
+                              variant={to === 'saved' ? 'outline' : 'ghost'}
+                              size="sm"
+                              onClick={() => move(a, to)}
+                              aria-label={`${label}: ${a.title}`}
+                              title={label}
+                            >
+                              <Icon className="size-3.5" />
+                              <span className="hidden sm:inline">{label}</span>
+                            </Button>
+                          ))}
+                          <Button
+                            variant={openRelated === a.id ? 'outline' : 'ghost'}
+                            size="sm"
+                            onClick={() => setOpenRelated((id) => (id === a.id ? null : a.id))}
+                            aria-expanded={openRelated === a.id}
+                            aria-label={`News collegate: ${a.title}`}
+                            title="News collegate"
+                          >
+                            <Link2 className="size-3.5" />
+                            <span className="hidden sm:inline">Collegate</span>
+                          </Button>
+                        </div>
+                      </Card>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {view === 'saved' && selected.length > 0 && (
+                <CreatePostPanel
+                  articleIds={selected}
+                  onClear={() => setSelected([])}
+                  onCreated={onOpenDraft}
+                  onOpenSettings={onOpenSettings}
+                />
+              )}
+            </>
           )}
         </>
       )}
