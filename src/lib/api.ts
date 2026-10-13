@@ -15,6 +15,7 @@ import type { ModelInfo, Profile, ProfileInput, ProfileTest } from './profiles';
 import type { Voice } from './voice';
 import type { Draft } from './drafts';
 import type { TopicGraph } from './topic-graph';
+import type { EmbeddingConfig, EmbeddingStatus } from './embeddings';
 
 export class ApiError extends Error {
   status: number;
@@ -67,9 +68,28 @@ export const api = {
     request<{ added: number; error: string | null; feed: Feed }>('POST', `/feeds/${id}/refresh`),
   feedStatus: () => request<FeedStatus>('GET', '/feeds/status'),
   refreshAllFeeds: () => request<RefreshSummary>('POST', '/feeds/refresh'),
-  topicGraph: ({ days, archived }: { days: number; archived: boolean }) =>
-    request<TopicGraph>('GET', `/articles/graph?days=${days}&archived=${archived}`),
-  relatedArticles: (id: number) => request<Article[]>('GET', `/articles/${id}/related`),
+  embeddingStatus: () => request<EmbeddingStatus>('GET', '/embeddings/status'),
+  putEmbeddingConfig: (config: EmbeddingConfig) =>
+    request<EmbeddingStatus>('PUT', '/embeddings/config', config),
+  runEmbeddings: () => request<EmbeddingStatus>('POST', '/embeddings/run'),
+  topicGraph: ({
+    days,
+    archived,
+    feedIds,
+  }: {
+    days: number;
+    archived: boolean;
+    /** Undefined = every feed. */
+    feedIds?: number[];
+  }) =>
+    request<TopicGraph>(
+      'GET',
+      `/articles/graph?days=${days}&archived=${archived}${
+        feedIds ? `&feedIds=${feedIds.join(',')}` : ''
+      }`,
+    ),
+  relatedArticles: (id: number) =>
+    request<(Article & { similarity?: number })[]>('GET', `/articles/${id}/related`),
   articleCounts: () => request<Record<ArticleState, number>>('GET', '/articles/counts'),
   setArticleState: (id: number, state: Exclude<ArticleState, 'archived'>) =>
     request<Article>('PATCH', `/articles/${id}`, { state }),

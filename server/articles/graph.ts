@@ -28,6 +28,9 @@ type Options = {
   minSimilarity?: number;
 };
 
+const shorten = (title: string, max = 48) =>
+  title.length > max ? `${title.slice(0, max - 1).trimEnd()}…` : title;
+
 /** Folds plurals and derived forms together: "exports"/"export", "taiwanese"/"taiwan". */
 const keyOf = (word: string) => (word.length > 6 ? word.slice(0, 6) : word);
 
@@ -177,7 +180,16 @@ export function buildTopicGraph(
       .sort((p, q) => q[1] - p[1] || idf(q[0]) - idf(p[0]) || p[0].localeCompare(q[0]))
       .slice(0, maxLabelTerms)
       .map(([k]) => display(k));
-    return { id, label: terms.join(' · '), terms, size: members.length };
+    // Linked by meaning across languages, a topic may share no word at all: name it after its
+    // most connected article instead.
+    const label = terms.length
+      ? terms.join(' · ')
+      : shorten(
+          articles[
+            members.reduce((best, i) => (neighbours[i].length > neighbours[best].length ? i : best))
+          ].title,
+        );
+    return { id, label, terms, size: members.length };
   });
 
   const nodes = articles.flatMap((a, i) =>

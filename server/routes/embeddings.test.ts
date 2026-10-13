@@ -61,6 +61,20 @@ describe('embeddings', () => {
     expect(requests).toHaveLength(1);
   });
 
+  it('embeds Hacker News items by title only: their summary is the same boilerplate for all', async () => {
+    const { embedder, requests } = setup();
+    const { embeddingText } = await import('../store/embeddings.ts');
+    expect(
+      embeddingText({
+        title: 'Docker Agent',
+        snippet:
+          'Article URL: https://github.com/docker Comments URL: https://news.ycombinator.com',
+      }),
+    ).toBe('Docker Agent');
+    await embedder.runNow();
+    expect(requests[0].body.input[0]).toBe('Secondo\nRiassunto 1');
+  });
+
   it('reports progress and the missing key without calling the provider', async () => {
     const { app, embedder, requests } = setup({});
     await embedder.runNow();

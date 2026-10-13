@@ -23,9 +23,15 @@ const toBlob = (v: Float32Array) => Buffer.from(v.buffer, v.byteOffset, v.byteLe
 // Copy into a fresh buffer: a Buffer from SQLite may not sit on a 4-byte boundary.
 const fromBlob = (b: Buffer) => new Float32Array(Uint8Array.from(b).buffer);
 
-/** Title plus summary: enough to tell stories apart, short enough for any embedding model. */
+/** Feeds whose "summary" is the same boilerplate on every item (Hacker News via hnrss). */
+const BOILERPLATE = /Comments URL:/;
+
+/**
+ * Title plus summary: enough to tell stories apart, short enough for any embedding model. A
+ * boilerplate summary would make every item of that feed look alike, so those keep the title only.
+ */
 export const embeddingText = (a: { title: string; snippet: string }) =>
-  `${a.title}\n${a.snippet}`.slice(0, 1000);
+  (BOILERPLATE.test(a.snippet) ? a.title : `${a.title}\n${a.snippet}`).slice(0, 1000);
 
 /** Articles without a vector for `model`, newest first; discarded ones are never embedded. */
 export function pendingEmbeddings(db: DB, model: string, limit: number) {

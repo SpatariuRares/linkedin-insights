@@ -85,6 +85,12 @@ any old localStorage state to `POST /api/migrate`, which refuses with 409 once t
   (fetch to `{baseUrl}/chat/completions`, key read from the env var named in the profile),
   `codex-cli` (spawns `codex exec --json`), `claude-cli` (not implemented yet). Throw `LlmError`
   for messages meant to be shown to the user.
+- `embeddings/` — `EmbeddingRunner` embeds title + summary of every non-discarded article in the
+  background (OpenAI-compatible `/embeddings`, default OpenRouter `baai/bge-m3`, config in the
+  `embeddings` setting) and stores unit vectors in `article_embeddings`. "Collegate" and the topic
+  graph (`articles/graph.ts`) use cosine similarity when vectors exist and fall back to FTS5 keyword
+  matching (`articles/search.ts`) otherwise; thresholds in `embeddings/similar.ts` were measured on
+  bge-m3, so re-check them if you change model.
 - `agent/` — `compose.ts` builds the Italian ghostwriter prompt from Voice + sources + the user's
   thought and validates the JSON answer (2 variants + 3 hooks) with Zod; `run.ts` `runDraft`
   retries once on malformed output.

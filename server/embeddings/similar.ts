@@ -8,7 +8,7 @@
 /** Below this, two articles are not about the same story. */
 export const RELATED_MIN = 0.5;
 /** Graph links need a little more, so topics stay tight. */
-export const GRAPH_MIN = 0.55;
+export const GRAPH_MIN = 0.6;
 
 export function cosine(a: Float32Array, b: Float32Array): number {
   let dot = 0;

@@ -114,6 +114,14 @@ describe('buildTopicGraph with embeddings', () => {
     expect(graph.edges.every((e) => e.kind === 'semantic')).toBe(true);
   });
 
+  it('names a topic that shares no word after its most connected article', () => {
+    const graph = buildTopicGraph(multilingual, { vectors });
+    const ukraine = graph.topics[graph.nodes.find((n) => n.id === 1)!.topic!];
+    expect(ukraine.terms).toEqual([]);
+    // all three are equally connected: the first one names the topic
+    expect(ukraine.label).toBe('Ukraine says Russia bombed apartment block');
+  });
+
   it('falls back to shared words for articles that have no vector yet', () => {
     const partial = new Map([...vectors].filter(([id]) => id !== 5));
     const graph = buildTopicGraph(multilingual, { vectors: partial });

@@ -218,4 +218,9 @@ export const MIGRATIONS: string[] = [
   INSERT INTO settings (key, value) VALUES
     ('embeddings', '{"enabled":true,"baseUrl":"https://openrouter.ai/api/v1","apiKeyEnv":"OPENROUTER_API_KEY","model":"baai/bge-m3"}');
   `,
+  // 8 — Hacker News items were embedded with their boilerplate summary: embed them again
+  `
+  DELETE FROM article_embeddings
+  WHERE article_id IN (SELECT id FROM articles WHERE snippet LIKE '%Comments URL:%');
+  `,
 ];

@@ -20,7 +20,7 @@ export function RelatedArticles({
   articleId: number;
   onSaved: () => void;
 }) {
-  const [related, setRelated] = useState<Article[] | null>(null);
+  const [related, setRelated] = useState<(Article & { similarity?: number })[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -64,6 +64,7 @@ export function RelatedArticles({
               <div className="min-w-0 space-y-0.5">
                 <p className="text-muted-foreground text-xs">
                   {r.source} · {formatRelative(r.publishedAt)} · {STATE_LABELS[r.state]}
+                  {r.similarity !== undefined && ` · affinità ${Math.round(r.similarity * 100)}%`}
                 </p>
                 <a
                   href={r.url}
