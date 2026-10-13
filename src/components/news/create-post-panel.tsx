@@ -3,6 +3,7 @@ import { Sparkles, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button, Card, Label } from '../ui';
 import { api } from '../../lib/api';
+import { cn } from '../../lib/utils';
 import type { Profile } from '../../lib/profiles';
 
 const selectClass =
@@ -13,11 +14,14 @@ export function CreatePostPanel({
   onClear,
   onCreated,
   onOpenSettings,
+  sticky = true,
 }: {
   articleIds: number[];
   onClear: () => void;
   onCreated: (draftId: number) => void;
   onOpenSettings: () => void;
+  /** Pinned to the bottom of the viewport while scrolling a list; off where it would cover content. */
+  sticky?: boolean;
 }) {
   const [thought, setThought] = useState('');
   const [profiles, setProfiles] = useState<Profile[] | null>(null);
@@ -52,7 +56,7 @@ export function CreatePostPanel({
   };
 
   return (
-    <Card className="sticky bottom-4 z-10 space-y-3 p-4 shadow-lg">
+    <Card className={cn('space-y-3 p-4', sticky && 'sticky bottom-4 z-10 shadow-lg')}>
       <div className="flex items-center justify-between gap-2">
         <p className="text-foreground text-sm font-medium">
           Crea un post da {articleIds.length} news

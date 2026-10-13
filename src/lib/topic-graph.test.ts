@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { layoutTopicGraph, neighbourhood, topicColor, viewBoxFor } from './topic-graph';
+import {
+  feedCategory,
+  feedsByCategory,
+  formatViewBox,
+  layoutTopicGraph,
+  neighbourhood,
+  panViewBox,
+  parseViewBox,
+  topicColor,
+  viewBoxFor,
+  zoomViewBox,
+} from './topic-graph';
 
 const node = (id: number, topic: number | null) => ({ id, topic, degree: 2 });
 
@@ -50,5 +61,49 @@ describe('helpers', () => {
 
   it('finds an article with its direct links', () => {
     expect([...neighbourhood(GRAPH, 2)].sort()).toEqual([1, 2, 3]);
+  });
+});
+
+describe('feed categories', () => {
+  it('reads the category from the feed title prefix', () => {
+    expect(feedCategory('AI · Simon Willison')).toBe('AI');
+    expect(feedCategory('Geo · Il Post Mondo')).toBe('Geo');
+    expect(feedCategory('Il Post')).toBe('Altro');
+  });
+
+  it('groups feeds by category, Altro last', () => {
+    const groups = feedsByCategory([
+      { id: 1, title: 'Tech · Ars' },
+      { id: 2, title: 'Blog senza prefisso' },
+      { id: 3, title: 'AI · OpenAI' },
+      { id: 4, title: 'AI · Google' },
+    ]);
+    expect([...groups]).toEqual([
+      ['AI', [3, 4]],
+      ['Tech', [1]],
+      ['Altro', [2]],
+    ]);
+  });
+});
+
+describe('zoom and pan', () => {
+  const fit = { x: 0, y: 0, w: 100, h: 50 };
+
+  it('zooms around the given point and keeps the aspect ratio', () => {
+    expect(zoomViewBox(fit, 2, fit)).toEqual({ x: 25, y: 12.5, w: 50, h: 25 });
+    expect(zoomViewBox(fit, 2, fit, 0, 0)).toEqual({ x: 0, y: 0, w: 50, h: 25 });
+  });
+
+  it('stops at 8x in and 4x out', () => {
+    expect(zoomViewBox(fit, 100, fit).w).toBe(12.5);
+    expect(zoomViewBox(fit, 0.01, fit).w).toBe(400);
+  });
+
+  it('pans by screen pixels converted to view units', () => {
+    expect(panViewBox(fit, 10, -20, 200)).toEqual({ x: -5, y: 10, w: 100, h: 50 });
+  });
+
+  it('round-trips a view box string', () => {
+    expect(formatViewBox(parseViewBox('-15 -15 30 30'))).toBe('-15 -15 30 30');
   });
 });

@@ -345,7 +345,7 @@ export function NewsPage({
           </div>
 
           {mode === 'graph' ? (
-            <TopicGraphView />
+            <TopicGraphView onOpenDraft={onOpenDraft} onOpenSettings={onOpenSettings} />
           ) : (
             <>
               <div

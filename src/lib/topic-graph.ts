@@ -13,11 +13,18 @@ import type { Article } from './news';
 /** Shape of GET /api/articles/graph. */
 export type TopicGraph = {
   nodes: { id: number; topic: number | null; degree: number; article: Article }[];
-  edges: { source: number; target: number; weight: number; shared: string[] }[];
+  edges: {
+    source: number;
+    target: number;
+    weight: number;
+    shared: string[];
+    kind: 'semantic' | 'keywords';
+  }[];
   topics: { id: number; label: string; terms: string[]; size: number }[];
   isolated: number;
   total: number;
   truncated: boolean;
+  method: 'semantic' | 'keywords' | 'mixed';
 };
 
 /** Topics past the eighth share one neutral color: the palette has eight validated hues. */
@@ -113,11 +120,57 @@ export function viewBoxFor(points: Positioned[], padding = 60): string {
 }
 
 /** The article and every article linked to it, for hover highlighting. */
-export function neighbourhood(graph: Pick<TopicGraph, 'edges'>, id: number): Set<number> {
+export function neighbourhood(
+  graph: { edges: { source: number; target: number }[] },
+  id: number,
+): Set<number> {
   const ids = new Set([id]);
   for (const e of graph.edges) {
     if (e.source === id) ids.add(e.target);
     if (e.target === id) ids.add(e.source);
   }
   return ids;
+}
+
+/** "AI · Simon Willison" → "AI": the category is the prefix the feed's title starts with. */
+export function feedCategory(title: string): string {
+  const m = title.match(/^([^·]{1,20}?)\s*·\s/);
+  return m ? m[1].trim() : 'Altro';
+}
+
+/** Feed ids by category, categories in alphabetical order with "Altro" last. */
+export function feedsByCategory(feeds: { id: number; title: string }[]): Map<string, number[]> {
+  const groups = new Map<string, number[]>();
+  for (const f of feeds) {
+    const c = feedCategory(f.title);
+    groups.set(c, [...(groups.get(c) ?? []), f.id]);
+  }
+  return new Map(
+    [...groups].sort(([a], [b]) => (a === 'Altro' ? 1 : b === 'Altro' ? -1 : a.localeCompare(b))),
+  );
+}
+
+export type ViewBox = { x: number; y: number; w: number; h: number };
+
+export function parseViewBox(vb: string): ViewBox {
+  const [x, y, w, h] = vb.split(' ').map(Number);
+  return { x, y, w, h };
+}
+
+export const formatViewBox = (v: ViewBox) => `${v.x} ${v.y} ${v.w} ${v.h}`;
+
+/**
+ * Zooms by `factor` (>1 = closer) keeping the point at fractional position (fx, fy) of the view
+ * still, so wheel-zoom follows the mouse. Clamped between 8x in and 4x out of `fit`.
+ */
+export function zoomViewBox(v: ViewBox, factor: number, fit: ViewBox, fx = 0.5, fy = 0.5): ViewBox {
+  const w = Math.min(fit.w * 4, Math.max(fit.w / 8, v.w / factor));
+  const h = (w / v.w) * v.h;
+  return { x: v.x + (v.w - w) * fx, y: v.y + (v.h - h) * fy, w, h };
+}
+
+/** Moves the view by a drag of (dx, dy) screen pixels on an element `width` pixels wide. */
+export function panViewBox(v: ViewBox, dx: number, dy: number, width: number): ViewBox {
+  const scale = v.w / width;
+  return { ...v, x: v.x - dx * scale, y: v.y - dy * scale };
 }

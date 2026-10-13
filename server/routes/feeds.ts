@@ -55,6 +55,13 @@ const graphQuery = z.object({
     .enum(['true', 'false'])
     .transform((v) => v === 'true')
     .default(false),
+  /** Comma-separated feed ids; absent = every feed, empty = none. */
+  feedIds: z
+    .string()
+    .regex(/^(\d+(,\d+)*)?$/)
+    .max(2000)
+    .transform((v) => (v ? v.split(',').map(Number) : []))
+    .optional(),
 });
 const GRAPH_MAX_ARTICLES = 400;
 const articlePatch = z.object({ state: z.enum(['inbox', 'saved', 'discarded']) });
@@ -185,6 +192,7 @@ export function feedRoutes({ db, fetcher, now, scheduler, triage }: FeedDeps) {
       since: new Date(now().getTime() - query.data.days * 86_400_000),
       includeArchived: query.data.archived,
       limit: GRAPH_MAX_ARTICLES,
+      feedIds: query.data.feedIds,
     });
     const model = activeEmbeddingModel(db);
     const vectors = model

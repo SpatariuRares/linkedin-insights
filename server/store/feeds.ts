@@ -281,16 +281,19 @@ export function relatedArticles(db: DB, article: Article, limit = 10): Article[]
 /** The articles the topic graph is drawn from: recent, not discarded, newest first. */
 export function graphArticles(
   db: DB,
-  opts: { since: Date; includeArchived: boolean; limit: number },
+  opts: { since: Date; includeArchived: boolean; limit: number; feedIds?: number[] },
 ): Article[] {
   const states = opts.includeArchived ? "('inbox', 'saved', 'archived')" : "('inbox', 'saved')";
+  const feeds = opts.feedIds
+    ? `AND a.feed_id IN (${opts.feedIds.map(() => '?').join(',') || 'NULL'})`
+    : '';
   return (
     db
       .prepare(
-        `${ARTICLE_SELECT} WHERE a.state IN ${states} AND a.published_at >= ?
+        `${ARTICLE_SELECT} WHERE a.state IN ${states} AND a.published_at >= ? ${feeds}
          ORDER BY a.published_at DESC, a.id DESC LIMIT ?`,
       )
-      .all(opts.since.toISOString(), opts.limit) as ArticleRow[]
+      .all(opts.since.toISOString(), ...(opts.feedIds ?? []), opts.limit) as ArticleRow[]
   ).map(toArticle);
 }
 

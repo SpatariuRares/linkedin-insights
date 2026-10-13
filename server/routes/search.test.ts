@@ -134,6 +134,30 @@ describe('topic graph', () => {
     expect((await get('/api/articles/graph?days=1')).body.total).toBe(3);
     expect((await get('/api/articles/graph?days=0')).status).toBe(400);
   });
+
+  it('keeps only the chosen feeds', async () => {
+    const { db, get } = setup(STORIES);
+    const other = addFeed(db, { url: 'https://altro.example.com/feed', title: 'Altro' }, NOW);
+    insertArticles(
+      db,
+      other,
+      [
+        {
+          guid: null,
+          url: 'https://altro.example.com/1',
+          title: 'Taiwan chip export limits anger China',
+          snippet: '',
+          author: null,
+          publishedAt: NOW.toISOString(),
+        },
+      ],
+      NOW,
+    );
+    expect((await get('/api/articles/graph')).body.total).toBe(4);
+    expect((await get(`/api/articles/graph?feedIds=${other.id}`)).body.total).toBe(1);
+    expect((await get('/api/articles/graph?feedIds=')).body.total).toBe(0);
+    expect((await get('/api/articles/graph?feedIds=1,x')).status).toBe(400);
+  });
 });
 
 const unit = (...xs: number[]) => {
