@@ -111,3 +111,6 @@ any old localStorage state to `POST /api/migrate`, which refuses with 409 once t
 `docs/PRD-news-agent.md` (Italian) is the spec for the news + agent work; `docs/issues.json` tracks
 its issues (`NA-xx`) with status, blockers and user-story links — update an issue's status there
 when you finish it.
+
+`docs/` is gitignored: these notes are personal and live only on the owner's machine, so never
+commit them or quote them in public text (README, commit messages, PRs).

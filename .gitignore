@@ -40,3 +40,6 @@ post-tabnews.md
 data/
 .playwright-mcp/
 .sample/
+
+# Personal planning notes: kept locally, never published
+docs/
